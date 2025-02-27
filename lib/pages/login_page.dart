@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
+import 'Home_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -9,12 +10,12 @@ class LoginPage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Image
+          
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
                 image: AssetImage(
-                    "lib/images/iPhone 14 & 15 Pro - 31.jpg"), // Ensure correct path
+                    "lib/images/iPhone 14 & 15 Pro - 31.jpg"),
                 fit: BoxFit.cover,
               ),
             ),
@@ -78,7 +79,11 @@ class LoginPage extends StatelessWidget {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => HomePage()),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             Colors.white, // White button background
