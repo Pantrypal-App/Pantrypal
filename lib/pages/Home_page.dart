@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
 
 void main() {
   runApp(PantryPalApp());
@@ -84,7 +86,7 @@ class FeaturedGoalsSection extends StatelessWidget {
 
           /// Increased the height to 350 for a taller box
           SizedBox(
-            height: 350, // Increased height for bigger cards
+            height: 360, // Increased height for bigger cards
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
@@ -204,26 +206,123 @@ class GoalCard extends StatelessWidget {
   }
 }
 
-class CustomBottomNavBar extends StatelessWidget {
+
+
+class CustomBottomNavBar extends StatefulWidget {
+  @override
+  CustomBottomNavBarState createState() => CustomBottomNavBarState();
+}
+
+class CustomBottomNavBarState extends State<CustomBottomNavBar> {
+  int _selectedIndex = 0;
+
+  final List<IconData> icons = [
+    Icons.home,
+    Icons.volunteer_activism,
+    Icons.request_page,
+    Icons.notifications,
+    Icons.person,
+  ];
+
+  final List<String> labels = [
+    'Home',
+    'Donate',
+    'Request',
+    'Notification',
+    'You',
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      backgroundColor: Colors.green,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.white70,
-      items: [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.volunteer_activism), label: 'Donate'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.request_page), label: 'Request'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.notifications), label: 'Notification'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'You'),
+    double width = MediaQuery.of(context).size.width;
+    double itemWidth = width / icons.length;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: EdgeInsets.only(top: 10),
+          decoration: BoxDecoration(
+            color: Color(0xFF6FA86D), // Green color
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: BottomNavigationBar(
+            backgroundColor: Colors.transparent,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.black,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            items: List.generate(icons.length, (index) {
+              return BottomNavigationBarItem(
+                icon: Padding(
+                  padding: EdgeInsets.only(top: _selectedIndex == index ? 15 : 0),
+                  child: Icon(icons[index]),
+                ),
+                label: labels[index],
+              );
+            }),
+          ),
+        ),
+        // Hide floating icon when any button is selected
+        Positioned(
+          top: -20,
+          left: (_selectedIndex * itemWidth) + (itemWidth / 2) - 25,
+          child: AnimatedOpacity(
+            duration: Duration(milliseconds: 300),
+            opacity: 0, // Floating icon is always hidden
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Color(0xFF6FA86D), width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                icons[_selectedIndex],
+                color: Color(0xFF6FA86D),
+                size: 28,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 }
+
+
+
+
+
 
 class PowerToEndHungerSection extends StatelessWidget {
   @override
@@ -242,8 +341,8 @@ class PowerToEndHungerSection extends StatelessWidget {
 
           Center(
             child: Container(
-              width: 340, // Keeps width smaller
-              height: 360, // Increased height of the box
+              width: 390, // Keeps width smaller
+              height: 380, // Increased height of the box
               child: Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -355,44 +454,56 @@ class InviteFriendsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-      child: Card(
-        color: Color(0xFFE3F2FD), // Light blue background
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0), // Adds spacing
+      child: Center(
+        // Centers the box horizontally
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: 120, // Adjust as needed
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue[100],
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Row(
             children: [
               Image.asset(
-                'lib/images/invite your friends.png', // Placeholder for invite image
-                height: 50,
-                width: 50,
+                'lib/images/invite your friends.png', // Update this path as needed
+                width: 80, // Adjust image size
+                height: 80,
+                fit: BoxFit.cover,
               ),
-              SizedBox(width: 10),
+              SizedBox(width: 10), // Add spacing
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       "Invite your friends",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
+                    SizedBox(height: 4),
                     Text(
                       "and fight hunger together",
-                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                   ],
                 ),
               ),
+
               ElevatedButton(
+                onPressed: () {}, // Add invite function
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: () {},
-                child: Text("Invite", style: TextStyle(color: Colors.white)),
+                child: Text("Invite"),
               ),
             ],
           ),
@@ -407,8 +518,74 @@ class GetToKnowUsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Text("Get to Know Us",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // Left-align the title
+        children: [
+          Text(
+            "Get To Know Us",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 10),
+          Center(
+            // Centers the image and button
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 390,
+                height: 370,
+                alignment: Alignment.center,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Image.asset(
+                      'lib/images/get to know us.jpg',
+                      fit: BoxFit.cover,
+                      width: 370,
+                      height: 370,
+                    ),
+                    Positioned(
+                      top: 20,
+                      left: 20,
+                      right: 20, // Ensures text wraps properly
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          "Follow how PantryPal delivers your donation",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22, // Adjust size as needed
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Add navigation or action here
+                        },
+                        child: Text("Read More"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Colors.orange, // Button background color
+                          foregroundColor:
+                              Colors.black, // Text color set to black
+                          shape: RoundedRectangleBorder(
+                            // Makes it a rectangle
+                            borderRadius: BorderRadius.zero,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -418,19 +595,195 @@ class DonationBreakdownSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Text("Donation Breakdown",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "DONATION BREAKDOWN",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 10),
+          Center(
+            child: Container(
+              width: 370, // Adjust width freely
+              height: 150, // Adjust height freely
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 5,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center, // Center content
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center, // Center text vertically
+                      children: [
+                        Text(
+                          "How is my donation used?",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 17),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Add navigation or action here
+                          },
+                          child: Text("Learn More"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Container(
+                    width: 100, // Adjust size freely
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                        image: AssetImage('lib/images/donation.jpg'), 
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class EmergencyAidSection extends StatelessWidget {
+
+
+class EmergencyAidSection extends StatefulWidget {
+  @override
+  _EmergencyAidSectionState createState() => _EmergencyAidSectionState();
+}
+
+class _EmergencyAidSectionState extends State<EmergencyAidSection> {
+  int _currentIndex = 0;
+
+  final List<String> images = [
+    'lib/images/emergency aid.jpg',
+    'lib/images/schoold feeding.jpg',
+    'lib/images/nutrition support.jpg',
+  ];
+
+  final List<String> titles = [
+    "Emergency Aid",
+    "School Feeding",
+    "Nutrition Support",
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Text("Emergency Aid",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    double carouselHeight = screenHeight * 0.20; // 30% of screen height
+    double carouselWidth = screenWidth * 0.83; // 90% of screen width
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Container(
+            width: carouselWidth,
+            height: carouselHeight,
+            child: CarouselSlider(
+              options: CarouselOptions(
+                height: carouselHeight,
+                autoPlay: true,
+                viewportFraction: 1.0, // Show only one image fully
+                enableInfiniteScroll: true,
+                onPageChanged: (index, reason) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+              ),
+              items: List.generate(images.length, (index) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      Image.asset(
+                        images[index],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: carouselHeight,
+                      ),
+                      Positioned(
+                        top: 20,
+                        left: 20,
+                        child: Text(
+                          titles[index], // Dynamic text based on image index
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 10,
+                        left: 10,
+                        child: ElevatedButton(
+                          onPressed: () {},
+                          child: Text("Read More"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(255, 127, 125, 123),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(images.length, (index) {
+            return Container(
+              margin: EdgeInsets.symmetric(horizontal: 4),
+              width: _currentIndex == index ? 12 : 8,
+              height: _currentIndex == index ? 12 : 8,
+              decoration: BoxDecoration(
+                color: _currentIndex == index ? Colors.orange : Colors.grey,
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }
+
+
+
+

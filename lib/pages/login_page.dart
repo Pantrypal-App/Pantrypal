@@ -147,7 +147,7 @@ class LoginPage extends StatelessWidget {
                             ),
                             icon: Image.asset(
                               "lib/images/images-removebg-preview (3).png", // Ensure correct path
-                              height: 24,
+                              height: 20,
                             ),
                             label: const Text("Google",
                                 style: TextStyle(color: Colors.black)),
@@ -172,7 +172,7 @@ class LoginPage extends StatelessWidget {
                             ),
                             icon: Image.asset(
                               "lib/images/Facebook-Logosu-removebg-preview.png", // Ensure correct path
-                              height: 24,
+                              height: 20,
                             ),
                             label: const Text("Facebook",
                                 style: TextStyle(color: Colors.black)),
