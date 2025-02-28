@@ -125,7 +125,7 @@ class FeaturedGoalsSection extends StatelessWidget {
 
           /// Increased the height to 350 for a taller box
           SizedBox(
-            height: 360, // Increased height for bigger cards
+            height: 350, // Increased height for bigger cards
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
