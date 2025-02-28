@@ -3,6 +3,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'profile_page.dart'; 
+import 'Notification_page.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -81,7 +82,12 @@ class _HomePageState extends State<HomePage> {
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
-          if (index == 4) { // "You" button is at index 4
+          if (index == 3) { // Notification button
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationPage()),
+            );
+          } else if (index == 4) { // Profile button
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProfilePage()),
