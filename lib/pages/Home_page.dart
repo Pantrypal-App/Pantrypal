@@ -3,7 +3,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 
-
 void main() {
   runApp(PantryPalApp());
 }
@@ -28,9 +27,10 @@ class _HomePageState extends State<HomePage> {
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
-    TabItem(icon: Icons.search, title: 'Search'),
-    TabItem(icon: Icons.favorite, title: 'Favorites'),
-    TabItem(icon: Icons.person, title: 'Profile'),
+    TabItem(icon: Icons.volunteer_activism, title: 'Donate'),
+    TabItem(icon: Icons.request_page, title: 'Request'),
+    TabItem(icon: Icons.notifications, title: 'Notification'),
+    TabItem(icon: Icons.person, title: 'You'),
   ];
 
   @override
@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage> {
         title: const Text('PantryPal', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(), // Enables smooth scrolling
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
                     "Hey, World-Changer!",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 8), // Space between texts
+                  const SizedBox(height: 8),
                   const Text(
                     "With just ₱40.00 you can share a meal with someone in need.",
                     style: TextStyle(fontSize: 16, color: Colors.black54),
@@ -62,29 +62,38 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            FeaturedGoalsSection(), // Ensure this widget is defined
+            // Placeholder widgets for your sections
+            FeaturedGoalsSection(),
             PowerToEndHungerSection(),
             InviteFriendsSection(),
             GetToKnowUsSection(),
             DonationBreakdownSection(),
             EmergencyAidSection(),
-            const SizedBox(height: 20), // Add some space at the bottom
+            const SizedBox(height: 20),
           ],
         ),
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor: Colors.green,
-        color: Colors.white,
-        colorSelected: Colors.orange,
+        backgroundColor: Colors.green, // Navbar background set to white
+        color: Colors.black, // Unselected icon color
+        colorSelected: Colors.black, // Selected icon color
         indexSelected: selectedIndex,
         onTap: (int index) {
           setState(() {
             selectedIndex = index;
           });
         },
-        chipStyle: const ChipStyle(convexBridge: true),
-        itemStyle: ItemStyle.circle,
+        chipStyle: const ChipStyle(
+          convexBridge: true,
+          background: Colors.white,
+          
+           // Change selection highlight to white
+        ),
+        itemStyle: ItemStyle.circle, // Keep circular buttons
+        titleStyle: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold), // Ensure text is visible
         animated: true,
       ),
     );
@@ -235,13 +244,6 @@ class GoalCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
 
 class PowerToEndHungerSection extends StatelessWidget {
   @override
@@ -544,11 +546,13 @@ class DonationBreakdownSection extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center, // Center text vertically
+                      mainAxisAlignment:
+                          MainAxisAlignment.center, // Center text vertically
                       children: [
                         Text(
                           "How is my donation used?",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 17),
                         ElevatedButton(
@@ -574,7 +578,7 @@ class DonationBreakdownSection extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       image: DecorationImage(
-                        image: AssetImage('lib/images/donation.jpg'), 
+                        image: AssetImage('lib/images/donation.jpg'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -588,8 +592,6 @@ class DonationBreakdownSection extends StatelessWidget {
     );
   }
 }
-
-
 
 class EmergencyAidSection extends StatefulWidget {
   @override
@@ -668,11 +670,12 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                           onPressed: () {},
                           child: Text("Read More"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 127, 125, 123),
+                            backgroundColor:
+                                const Color.fromARGB(255, 127, 125, 123),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.zero,
-                          ),
+                              borderRadius: BorderRadius.zero,
+                            ),
                           ),
                         ),
                       ),
@@ -702,7 +705,3 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
     );
   }
 }
-
-
-
-
