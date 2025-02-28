@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
+import 'profile_page.dart'; 
 
 void main() {
   runApp(PantryPalApp());
@@ -75,30 +76,36 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor: Colors.green, // Navbar background set to white
-        color: Colors.black, // Unselected icon color
-        colorSelected: Colors.black, // Selected icon color
+        backgroundColor: Colors.green,
+        color: Colors.black,
+        colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
-          setState(() {
-            selectedIndex = index;
-          });
+          if (index == 4) { // "You" button is at index 4
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProfilePage()),
+            );
+          } else {
+            setState(() {
+              selectedIndex = index;
+            });
+          }
         },
         chipStyle: const ChipStyle(
           convexBridge: true,
           background: Colors.white,
-          
-           // Change selection highlight to white
         ),
-        itemStyle: ItemStyle.circle, // Keep circular buttons
+        itemStyle: ItemStyle.circle,
         titleStyle: const TextStyle(
             fontSize: 9,
-            fontWeight: FontWeight.bold), // Ensure text is visible
+            fontWeight: FontWeight.bold),
         animated: true,
       ),
     );
   }
 }
+
 
 class FeaturedGoalsSection extends StatelessWidget {
   @override
