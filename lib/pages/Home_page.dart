@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
+import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 
 
 void main() {
@@ -16,16 +18,30 @@ class PantryPalApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int selectedIndex = 0;
+
+  final List<TabItem> items = [
+    TabItem(icon: Icons.home, title: 'Home'),
+    TabItem(icon: Icons.search, title: 'Search'),
+    TabItem(icon: Icons.favorite, title: 'Favorites'),
+    TabItem(icon: Icons.person, title: 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
-        title: Text('PantryPal', style: TextStyle(color: Colors.white)),
+        title: const Text('PantryPal', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
-        physics: BouncingScrollPhysics(), // Enables smooth scrolling
+        physics: const BouncingScrollPhysics(), // Enables smooth scrolling
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -34,29 +50,43 @@ class HomePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     "Hey, World-Changer!",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 8), // Space between texts
-                  Text(
+                  const SizedBox(height: 8), // Space between texts
+                  const Text(
                     "With just ₱40.00 you can share a meal with someone in need.",
                     style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                 ],
               ),
             ),
-            FeaturedGoalsSection(), // Your goal cards
+            FeaturedGoalsSection(), // Ensure this widget is defined
             PowerToEndHungerSection(),
             InviteFriendsSection(),
             GetToKnowUsSection(),
             DonationBreakdownSection(),
             EmergencyAidSection(),
-            SizedBox(height: 20), // Add some space at the bottom
+            const SizedBox(height: 20), // Add some space at the bottom
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(),
+      bottomNavigationBar: BottomBarInspiredInside(
+        items: items,
+        backgroundColor: Colors.green,
+        color: Colors.white,
+        colorSelected: Colors.orange,
+        indexSelected: selectedIndex,
+        onTap: (int index) {
+          setState(() {
+            selectedIndex = index;
+          });
+        },
+        chipStyle: const ChipStyle(convexBridge: true),
+        itemStyle: ItemStyle.circle,
+        animated: true,
+      ),
     );
   }
 }
@@ -207,117 +237,6 @@ class GoalCard extends StatelessWidget {
 }
 
 
-
-class CustomBottomNavBar extends StatefulWidget {
-  @override
-  CustomBottomNavBarState createState() => CustomBottomNavBarState();
-}
-
-class CustomBottomNavBarState extends State<CustomBottomNavBar> {
-  int _selectedIndex = 0;
-
-  final List<IconData> icons = [
-    Icons.home,
-    Icons.volunteer_activism,
-    Icons.request_page,
-    Icons.notifications,
-    Icons.person,
-  ];
-
-  final List<String> labels = [
-    'Home',
-    'Donate',
-    'Request',
-    'Notification',
-    'You',
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double itemWidth = width / icons.length;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: EdgeInsets.only(top: 10),
-          decoration: BoxDecoration(
-            color: Color(0xFF6FA86D), // Green color
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: BottomNavigationBar(
-            backgroundColor: Colors.transparent,
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.black,
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            items: List.generate(icons.length, (index) {
-              return BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(top: _selectedIndex == index ? 15 : 0),
-                  child: Icon(icons[index]),
-                ),
-                label: labels[index],
-              );
-            }),
-          ),
-        ),
-        // Hide floating icon when any button is selected
-        Positioned(
-          top: -20,
-          left: (_selectedIndex * itemWidth) + (itemWidth / 2) - 25,
-          child: AnimatedOpacity(
-            duration: Duration(milliseconds: 300),
-            opacity: 0, // Floating icon is always hidden
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Color(0xFF6FA86D), width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                icons[_selectedIndex],
-                color: Color(0xFF6FA86D),
-                size: 28,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 
 
