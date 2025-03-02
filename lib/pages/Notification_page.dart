@@ -22,10 +22,42 @@ class _NotificationPageState extends State<NotificationPage> {
   ];
 
   final List<Map<String, dynamic>> notifications = [
-    {"icon": Icons.notifications_active, "title": "Hey, World-Changer!", "message": "We just wanted to brighten your day with a little hello. Have a blast day, World-Changer.", "color": Colors.amber, "time": "Yesterday", "isRecent": false},
-    {"icon": Icons.favorite, "title": "You are a Hero Today!", "message": "Your generous donation has been received and will help the people in need. Together, we're creating change!", "color": Colors.blue, "time": "10 hours ago", "isRecent": true},
-    {"icon": Icons.eco, "title": "Your Kindness Fulfills the World!", "message": "Explore new causes and see how small actions create big impact. Let’s keep making a difference together!", "color": Colors.green, "time": "6 hours ago", "isRecent": true},
-    {"icon": Icons.volunteer_activism, "title": "Ready to make a difference today?", "message": "Discover new opportunities to support causes that matter to you. Together, we can create a brighter future.", "color": Colors.pink, "time": "2 hours ago", "isRecent": true},
+    {
+      "icon": Icons.notifications_active,
+      "title": "Hey, World-Changer!",
+      "message":
+          "We just wanted to brighten your day with a little hello. Have a blast day, World-Changer.",
+      "color": Colors.amber,
+      "time": "Yesterday",
+      "isRecent": false
+    },
+    {
+      "icon": Icons.favorite,
+      "title": "You are a Hero Today!",
+      "message":
+          "Your generous donation has been received and will help the people in need. Together, we're creating change!",
+      "color": Colors.blue,
+      "time": "10 hours ago",
+      "isRecent": true
+    },
+    {
+      "icon": Icons.eco,
+      "title": "Your Kindness Fulfills the World!",
+      "message":
+          "Explore new causes and see how small actions create big impact. Let’s keep making a difference together!",
+      "color": Colors.green,
+      "time": "6 hours ago",
+      "isRecent": true
+    },
+    {
+      "icon": Icons.volunteer_activism,
+      "title": "Ready to make a difference today?",
+      "message":
+          "Discover new opportunities to support causes that matter to you. Together, we can create a brighter future.",
+      "color": Colors.pink,
+      "time": "2 hours ago",
+      "isRecent": true
+    },
   ];
 
   @override
@@ -39,6 +71,7 @@ class _NotificationPageState extends State<NotificationPage> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        automaticallyImplyLeading: false, // Removes the back arrow
       ),
       body: Column(
         children: [
@@ -56,7 +89,8 @@ class _NotificationPageState extends State<NotificationPage> {
                 ),
                 TextButton(
                   onPressed: () {},
-                  child: Text("Mark all as read", style: TextStyle(color: Colors.blue)),
+                  child: Text("Mark all as read",
+                      style: TextStyle(color: Colors.blue)),
                 )
               ],
             ),
@@ -64,8 +98,12 @@ class _NotificationPageState extends State<NotificationPage> {
           Expanded(
             child: ListView(
               padding: EdgeInsets.all(10),
-              children: notifications.where((notif) => selectedFilter == "All" || notif["isRecent"] == true).map((notif) {
-                return _buildNotificationItem(notif["icon"], notif["title"], notif["message"], notif["color"], notif["time"]);
+              children: notifications
+                  .where((notif) =>
+                      selectedFilter == "All" || notif["isRecent"] == true)
+                  .map((notif) {
+                return _buildNotificationItem(notif["icon"], notif["title"],
+                    notif["message"], notif["color"], notif["time"]);
               }).toList(),
             ),
           ),
@@ -78,12 +116,14 @@ class _NotificationPageState extends State<NotificationPage> {
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
-          if (index == 0) { // Home
+          if (index == 0) {
+            // Home
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => HomePage()),
             );
-          } else if (index == 4) { // Profile
+          } else if (index == 4) {
+            // Profile
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProfilePage()),
@@ -99,9 +139,7 @@ class _NotificationPageState extends State<NotificationPage> {
           background: Colors.white,
         ),
         itemStyle: ItemStyle.circle,
-        titleStyle: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold),
+        titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
         animated: true,
       ),
     );
@@ -132,7 +170,8 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  Widget _buildNotificationItem(IconData icon, String title, String message, Color iconColor, String time) {
+  Widget _buildNotificationItem(IconData icon, String title, String message,
+      Color iconColor, String time) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(

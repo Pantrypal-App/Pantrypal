@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
-import 'profile_page.dart'; 
+import 'profile_page.dart';
 import 'Notification_page.dart';
+
 
 void main() {
   runApp(PantryPalApp());
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.green,
         title: const Text('PantryPal', style: TextStyle(color: Colors.white)),
+        automaticallyImplyLeading: false, // Removes the back arrow
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -82,12 +84,14 @@ class _HomePageState extends State<HomePage> {
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
-          if (index == 3) { // Notification button
+          if (index == 3) {
+            // Notification button
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => NotificationPage()),
             );
-          } else if (index == 4) { // Profile button
+          } else if (index == 4) {
+            // Profile button
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProfilePage()),
@@ -103,15 +107,12 @@ class _HomePageState extends State<HomePage> {
           background: Colors.white,
         ),
         itemStyle: ItemStyle.circle,
-        titleStyle: const TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold),
+        titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
         animated: true,
       ),
     );
   }
 }
-
 
 class FeaturedGoalsSection extends StatelessWidget {
   @override
