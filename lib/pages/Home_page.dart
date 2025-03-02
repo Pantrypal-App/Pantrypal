@@ -4,7 +4,7 @@ import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'profile_page.dart';
 import 'Notification_page.dart';
-
+import 'Donate_page.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -84,14 +84,20 @@ class _HomePageState extends State<HomePage> {
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
-          if (index == 3) {
-            // Notification button
+          if (index == 1) {
+            // Navigate to Donate Page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => DonationPage()),
+            );
+          } else if (index == 3) {
+            // Navigate to Notification Page
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => NotificationPage()),
             );
           } else if (index == 4) {
-            // Profile button
+            // Navigate to Profile Page
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProfilePage()),

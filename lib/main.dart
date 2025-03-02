@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'pages/login_page.dart';
 import 'pages/theme_provider.dart';
+import 'pages/theme.dart';
 
 void main() {
   runApp(
@@ -21,9 +22,9 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: themeProvider.isNightMode ? ThemeMode.dark : ThemeMode.light, 
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeProvider.isNightMode ? ThemeMode.dark : ThemeMode.light,
       home: const LoginPage(),
     );
   }

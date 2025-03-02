@@ -6,6 +6,7 @@ import 'donationlist_page.dart';
 import 'messageus_page.dart';
 import 'login_page.dart';
 import 'home_page.dart';
+import 'Donate_page.dart';
 import 'notification_page.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
@@ -33,7 +34,9 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: themeProvider.isNightMode
+            ? Colors.grey[900]
+            : const Color(0xFF4BB050),
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         automaticallyImplyLeading: false,
@@ -41,7 +44,9 @@ class _ProfilePageState extends State<ProfilePage> {
       body: Column(
         children: [
           Container(
-            color: themeProvider.isNightMode ? Colors.grey[800] : Colors.green,
+            color: themeProvider.isNightMode
+                ? Colors.grey[900]
+                : const Color(0xFF4BB050),
             padding: const EdgeInsets.only(top: 5, bottom: 15),
             child: Column(
               children: [
@@ -51,15 +56,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     backgroundColor: Colors.white,
                     child: CircleAvatar(
                       radius: 48,
-                      backgroundColor: Colors.grey[300],
-                      child: Icon(Icons.camera_alt, color: Colors.grey[700], size: 30),
+                      backgroundColor: themeProvider.isNightMode
+                          ? Colors.grey[700]
+                          : Colors.grey[300],
+                      child: Icon(Icons.camera_alt,
+                          color: themeProvider.isNightMode
+                              ? Colors.white70
+                              : Colors.grey[700],
+                          size: 30),
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text("Username",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                const Text("Example@gmail.com", style: TextStyle(fontSize: 14, color: Colors.white70)),
+                Text("Username",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+                Text("Example@gmail.com",
+                    style: TextStyle(fontSize: 14, color: Colors.white70)),
               ],
             ),
           ),
@@ -72,10 +87,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildCard(
                     themeProvider,
                     ListTile(
-                      title: const Text("Account Details", style: TextStyle(fontWeight: FontWeight.bold)),
+                      title: const Text("Account Details",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                       onTap: () => Navigator.push(
-                          context, MaterialPageRoute(builder: (context) => AccountDetailsPage())),
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => AccountDetailsPage())),
                     ),
                   ),
                   _buildCard(
@@ -83,14 +101,22 @@ class _ProfilePageState extends State<ProfilePage> {
                     Column(
                       children: [
                         _buildToggleOption(
-                          Icons.dark_mode, "Night Mode", themeProvider.isNightMode,
+                          Icons.dark_mode,
+                          "Night Mode",
+                          themeProvider.isNightMode,
                           (value) => themeProvider.toggleNightMode(),
                         ),
                         _buildOption(Icons.notifications, "Notification", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationPage()));
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => NotificationPage()));
                         }),
                         _buildOption(Icons.list, "List", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => DonationListPage()));
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => DonationListPage()));
                         }),
                       ],
                     ),
@@ -100,7 +126,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     Column(
                       children: [
                         _buildOption(Icons.message, "Message us", () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => FeedbackPage()));
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => FeedbackPage()));
                         }),
                         _buildOption(Icons.share, "Share"),
                         _buildOption(Icons.group, "About us"),
@@ -110,7 +139,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildCard(
                     themeProvider,
                     ListTile(
-                      title: const Text("Log Out", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      title: const Text("Log Out",
+                          style: TextStyle(
+                              color: Colors.red, fontWeight: FontWeight.bold)),
                       leading: const Icon(Icons.logout, color: Colors.red),
                       onTap: () {
                         Navigator.pushAndRemoveUntil(
@@ -130,15 +161,26 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: themeProvider.isNightMode
+            ? (Colors.grey[800] ?? Colors.grey) // Ensures it's never null
+            : const Color(0xFF4BB050), // Green color
+
         color: themeProvider.isNightMode ? Colors.white : Colors.black,
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
           if (index == 0) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomePage()));
+            Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (context) => HomePage()));
+          } else if (index == 1) {
+            // Navigate to Donate Page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => DonationPage()),
+            );
           } else if (index == 3) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => NotificationPage()));
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => NotificationPage()));
           } else {
             setState(() {
               selectedIndex = index;
@@ -165,11 +207,13 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildToggleOption(IconData icon, String title, bool value, Function(bool) onChanged) {
+  Widget _buildToggleOption(
+      IconData icon, String title, bool value, Function(bool) onChanged) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
-      trailing: Switch(value: value, onChanged: onChanged, activeColor: Colors.green),
+      trailing:
+          Switch(value: value, onChanged: onChanged, activeColor: Colors.green),
     );
   }
 
