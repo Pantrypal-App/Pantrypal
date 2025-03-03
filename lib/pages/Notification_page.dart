@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_page.dart';
 import 'Home_page.dart';
 import 'Donate_page.dart';
+import 'request_page.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 
@@ -129,6 +130,12 @@ class _NotificationPageState extends State<NotificationPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => DonationPage()),
+            );
+          } else if (index == 2) {
+            // Navigate to Notification Page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RequestPage()),
             );
           }
            else if (index == 4) {

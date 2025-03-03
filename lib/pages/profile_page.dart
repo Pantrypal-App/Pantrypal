@@ -6,6 +6,7 @@ import 'donationlist_page.dart';
 import 'messageus_page.dart';
 import 'login_page.dart';
 import 'home_page.dart';
+import 'request_page.dart';
 import 'Donate_page.dart';
 import 'notification_page.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
@@ -177,6 +178,12 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => DonationPage()),
+            );
+          } else if (index == 2) {
+            // Navigate to Notification Page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RequestPage()),
             );
           } else if (index == 3) {
             Navigator.pushReplacement(context,

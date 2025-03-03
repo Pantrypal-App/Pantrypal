@@ -4,6 +4,7 @@ import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'Notification_page.dart';
 import 'Home_page.dart';
 import 'profile_page.dart';
+import 'request_page.dart';
 
 class DonationPage extends StatefulWidget {
   @override
@@ -142,6 +143,11 @@ class _DonationPageState extends State<DonationPage> {
               MaterialPageRoute(builder: (context) => HomePage()),
             );
           } else if (index == 2) {
+            // Navigate to Notification Page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RequestPage()),
+            );
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
