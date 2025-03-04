@@ -5,6 +5,7 @@ import 'Notification_page.dart';
 import 'Home_page.dart';
 import 'profile_page.dart';
 import 'request_page.dart';
+import 'process_page.dart';
 
 class DonationPage extends StatefulWidget {
   @override
@@ -28,7 +29,7 @@ class _DonationPageState extends State<DonationPage> {
       appBar: AppBar(
         title: Text('PantryPal'),
         backgroundColor: Colors.green,
-         automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -40,7 +41,10 @@ class _DonationPageState extends State<DonationPage> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
-                    // Implement donation logic here
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProcessPage()),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber, // Yellow background
@@ -192,7 +196,8 @@ class _DonationPageState extends State<DonationPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.asset(imagePath, height: 200, width: double.infinity, fit: BoxFit.cover),
+            child: Image.asset(imagePath,
+                height: 200, width: double.infinity, fit: BoxFit.cover),
           ),
           Container(
             height: 200,
@@ -217,12 +222,17 @@ class _DonationPageState extends State<DonationPage> {
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(5),
                     ),
-                    child: Text(tag, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: Text(tag,
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 SizedBox(height: 8),
                 Text(
                   title,
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -312,7 +322,13 @@ class GoalCard extends StatelessWidget {
                             style: TextStyle(color: Colors.blue)),
                       ),
                       ElevatedButton(
-                        onPressed: () {}, // Navigate to donation
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ProcessPage()),
+                          );
+                        }, // Navigate to donation
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.black,
