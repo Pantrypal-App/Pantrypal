@@ -124,8 +124,7 @@ class _NotificationPageState extends State<NotificationPage> {
               context,
               MaterialPageRoute(builder: (context) => HomePage()),
             );
-          }
-          else if (index == 1) {
+          } else if (index == 1) {
             // Navigate to Donate Page
             Navigator.pushReplacement(
               context,
@@ -137,8 +136,7 @@ class _NotificationPageState extends State<NotificationPage> {
               context,
               MaterialPageRoute(builder: (context) => RequestPage()),
             );
-          }
-           else if (index == 4) {
+          } else if (index == 4) {
             // Profile
             Navigator.push(
               context,
@@ -195,15 +193,23 @@ class _NotificationPageState extends State<NotificationPage> {
           backgroundColor: iconColor.withOpacity(0.2),
           child: Icon(icon, color: iconColor),
         ),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 14), // Reduced size
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(message, style: TextStyle(fontSize: 12)),
-            SizedBox(height: 5),
-            Text(time, style: TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(message, style: TextStyle(fontSize: 10)), // Smaller text
+            SizedBox(height: 3), // Reduced spacing
+            Text(time,
+                style: TextStyle(
+                    fontSize: 9, color: Colors.grey)), // Smaller time text
           ],
         ),
+        contentPadding: EdgeInsets.symmetric(
+            horizontal: 12, vertical: 6), // Compact padding
       ),
     );
   }

@@ -13,17 +13,13 @@ class ThemeProvider extends ChangeNotifier {
   void toggleNightMode() async {
     _isNightMode = !_isNightMode;
     notifyListeners();
-    _saveTheme();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isNightMode', _isNightMode);
   }
 
-  void _loadTheme() async {
+  Future<void> _loadTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _isNightMode = prefs.getBool('isNightMode') ?? false;
     notifyListeners();
-  }
-
-  void _saveTheme() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool('isNightMode', _isNightMode);
   }
 }

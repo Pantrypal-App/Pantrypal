@@ -68,7 +68,7 @@ class _DonationPageState extends State<DonationPage> {
               _buildSectionTitle('Choose where to donate'),
               _buildDonationCard(
                 'Philippines: Help feed communities in the Philippines affected by disasters and poverty.',
-                'lib/images/typhon.jpg',
+                'lib/images/urgent.jpg',
                 'Urgent',
               ),
 
@@ -88,10 +88,10 @@ class _DonationPageState extends State<DonationPage> {
                   imagePath: 'lib/images/typhon.jpg',
                 ),
                 GoalCard(
-                  title: "Help Combat Malnutrition in Mindanao",
+                  title: "Help uplift urban poor communities",
                   description:
-                      "Provide nutritious meals to children in remote areas suffering from hunger and malnutrition.",
-                  imagePath: 'lib/images/typhon.jpg',
+                      "Your support can provide hope and resources to families struggling in urban poverty. Lend a hand today to make a positive impact.",
+                  imagePath: 'lib/images/urban 1.png',
                 ),
               ]),
 
@@ -108,13 +108,19 @@ class _DonationPageState extends State<DonationPage> {
                   title: "Empower Indigenous Communities with Food Assistance",
                   description:
                       "Support indigenous communities in the Philippines by donating life-saving meals.",
-                  imagePath: 'lib/images/typhon.jpg',
+                  imagePath: 'lib/images/indigenius.webp',
                 ),
                 GoalCard(
-                  title: "Provide School Meals for Underserved Children",
+                  title: "Create lifelong opportunities for children.",
                   description:
-                      "Ensure children in impoverished areas get daily nutritious school meals.",
-                  imagePath: 'lib/images/typhon.jpg',
+                      "Every child deserves to dream. Support orphanages to give love and care to those without family.",
+                  imagePath: 'lib/images/orphan 1.png',
+                ),
+                GoalCard(
+                  title: "Be a voice for the voiceless",
+                  description:
+                      "Animals need help too! Feel free to provide foods in animal shelters. Your generosity make all the difference.",
+                  imagePath: 'lib/images/dogs 1.png',
                 ),
               ]),
 
@@ -128,7 +134,7 @@ class _DonationPageState extends State<DonationPage> {
               ),
               _buildDonationCard(
                 'Global: Feed families who need it most',
-                'lib/images/typhon.jpg',
+                'lib/images/not sure where to help.jpeg',
               ),
             ],
           ),

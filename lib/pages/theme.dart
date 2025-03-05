@@ -10,7 +10,7 @@ final lightTheme = ThemeData(
   ),
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
     backgroundColor: Colors.green,
-    selectedItemColor: Colors.white,
+    selectedItemColor: Colors.white, 
     unselectedItemColor: Colors.black54,
   ),
 );

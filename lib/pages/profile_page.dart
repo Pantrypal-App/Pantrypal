@@ -34,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
+      appBar: AppBar( 
         backgroundColor: themeProvider.isNightMode
             ? Colors.grey[900]
             : const Color(0xFF4BB050),

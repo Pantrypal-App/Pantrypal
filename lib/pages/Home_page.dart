@@ -6,6 +6,8 @@ import 'profile_page.dart';
 import 'Notification_page.dart';
 import 'Donate_page.dart';
 import 'request_page.dart';
+import 'process_page.dart';
+import 'readmore_page.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -168,6 +170,24 @@ class FeaturedGoalsSection extends StatelessWidget {
                       "Provide nutritious meals to children in remote areas suffering from hunger and malnutrition.",
                   imagePath: 'lib/images/malnutrition.jpg',
                 ),
+                GoalCard(
+                  title: "Empower Indigenous Communities with Food Assistance",
+                  description:
+                      "Support indigenous communities in the Philippines by donating life-saving meals.",
+                  imagePath: 'lib/images/indigenius.webp',
+                ),
+                GoalCard(
+                  title: "Create lifelong opportunities for children.",
+                  description:
+                      "Every child deserves to dream. Support orphanages to give love and care to those without family.",
+                  imagePath: 'lib/images/orphan 1.png',
+                ),
+                GoalCard(
+                  title: "Be a voice for the voiceless",
+                  description:
+                      "Animals need help too! Feel free to provide foods in animal shelters. Your generosity make all the difference.",
+                  imagePath: 'lib/images/dogs 1.png',
+                ),
               ],
             ),
           ),
@@ -242,12 +262,23 @@ class GoalCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
-                        onPressed: () {}, // Navigate to more details
+                        onPressed: () {
+                          Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ReadMorePage()),
+                      );
+                        }, // Navigate to more details
                         child: Text("Read More",
                             style: TextStyle(color: Colors.blue)),
                       ),
                       ElevatedButton(
-                        onPressed: () {}, // Navigate to donation
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ProcessPage()),
+                          );
+                        }, // Navigate to donation
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
                               Colors.orange, // Button background color
@@ -694,7 +725,13 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                         bottom: 10,
                         left: 10,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ReadMorePage()),
+                            );
+                          },
                           child: Text("Read More"),
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
