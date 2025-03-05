@@ -34,10 +34,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar( 
-        backgroundColor: themeProvider.isNightMode
-            ? Colors.grey[900]
-            : const Color(0xFF4BB050),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         automaticallyImplyLeading: false,
@@ -45,9 +43,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: Column(
         children: [
           Container(
-            color: themeProvider.isNightMode
-                ? Colors.grey[900]
-                : const Color(0xFF4BB050),
+            color: Theme.of(context).appBarTheme.backgroundColor,
             padding: const EdgeInsets.only(top: 5, bottom: 15),
             child: Column(
               children: [
@@ -162,10 +158,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor: themeProvider.isNightMode
-            ? (Colors.grey[800] ?? Colors.grey) // Ensures it's never null
-            : const Color(0xFF4BB050), // Green color
-
+        backgroundColor:
+            Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
+                Colors.black,
         color: themeProvider.isNightMode ? Colors.white : Colors.black,
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
@@ -228,7 +223,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Card(
-        color: themeProvider.isNightMode ? Colors.grey[700] : Colors.white,
+        color: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         elevation: 2,
         child: child,
