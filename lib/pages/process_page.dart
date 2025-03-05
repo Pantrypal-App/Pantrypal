@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'monetary_page.dart';
+import 'physicalgoods_page.dart';
 
 class ProcessPage extends StatelessWidget {
   @override
@@ -12,7 +13,7 @@ class ProcessPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Donation',
+          '',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -60,9 +61,10 @@ class ProcessPage extends StatelessWidget {
                     ),
                     onPressed: () {
                       Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MonetaryDonationPage()),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => MonetaryDonationPage()),
+                      );
                     },
                     child: Text(
                       'Donate Now',
@@ -91,10 +93,10 @@ class ProcessPage extends StatelessWidget {
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
               children: [
-                _donationItem('Food', 'lib/images/food 2.png'),
-                _donationItem('Medicine', 'lib/images/medicine 2.png'),
-                _donationItem('Clothes', 'lib/images/clothe 2.png'),
-                _donationItem('Animal Food', 'lib/images/animal-food 2.png'),
+                _donationItem('Food', 'lib/images/food 2.png', context),
+                _donationItem('Medicine', 'lib/images/medicine 2.png', context),
+                _donationItem('Clothes', 'lib/images/clothe 2.png', context),
+                _donationItem('Animal Food', 'lib/images/animal-food 2.png', context),
               ],
             ),
             SizedBox(height: 20),
@@ -152,23 +154,31 @@ class ProcessPage extends StatelessWidget {
     );
   }
 
-  Widget _donationItem(String title, String imagePath) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: EdgeInsets.all(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(imagePath, height: 50),
-          SizedBox(height: 5),
-          Text(
-            title,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-        ],
+  Widget _donationItem(String title, String imagePath, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PhysicalGoodsDonationPage()),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: EdgeInsets.all(8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(imagePath, height: 50),
+            SizedBox(height: 5),
+            Text(
+              title,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }

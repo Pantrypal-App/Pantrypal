@@ -1,33 +1,34 @@
 import 'package:flutter/material.dart';
-import 'payment_page.dart';
+import 'donator_page.dart';
 
-class MonetaryDonationPage extends StatefulWidget {
+class PhysicalGoodsDonationPage extends StatefulWidget {
   @override
-  _MonetaryDonationPageState createState() => _MonetaryDonationPageState();
+  _PhysicalGoodsDonationPageState createState() =>
+      _PhysicalGoodsDonationPageState();
 }
 
-class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
+class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   TextEditingController searchController = TextEditingController();
   List<Map<String, String>> donations = [
     {
       'title': 'Bicol Region',
-      'subtitle': 'Recently affected by typhoon.',
-      'count': '3,089 donations'
+      'subtitle': 'Needs food and clothing after typhoon.',
+      'count': '2,540 items donated'
     },
     {
       'title': 'Manila Animal Rescue Shelter',
-      'subtitle': 'Supporting pet needs.',
-      'count': '2,011 donations'
+      'subtitle': 'Pet food and blankets needed.',
+      'count': '1,320 items donated'
     },
     {
       'title': 'Bangsamoro Autonomous Region',
-      'subtitle': 'Limited access to education.',
-      'count': '1,117 donations'
+      'subtitle': 'School supplies for children.',
+      'count': '980 items donated'
     },
     {
       'title': 'Leyte',
-      'subtitle': 'Residents face poverty.',
-      'count': '4,335 donations'
+      'subtitle': 'Hygiene kits and canned goods needed.',
+      'count': '3,412 items donated'
     },
   ];
   List<Map<String, String>> filteredDonations = [];
@@ -64,7 +65,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
           children: [
             // Title
             Text(
-              'Monetary Donation',
+              'Donate Physical Goods',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -187,7 +188,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PaymentPage()),
+                MaterialPageRoute(builder: (context) => DonatorPage()),
               );
             },
             style: ElevatedButton.styleFrom(
