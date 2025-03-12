@@ -8,6 +8,8 @@ import 'Donate_page.dart';
 import 'request_page.dart';
 import 'process_page.dart';
 import 'readmore_page.dart';
+import 'gamification_page.dart';
+import 'dart:async';
 
 void main() {
   runApp(PantryPalApp());
@@ -30,6 +32,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
+  double xPos = 20; // Initial X position
+  double yPos = 100;
+  bool showRewardIcon = true;
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
@@ -45,40 +50,108 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.green,
         title: const Text('PantryPal', style: TextStyle(color: Colors.white)),
-        automaticallyImplyLeading: false, // Removes the back arrow
+        automaticallyImplyLeading: false,
+        // Removes the back arrow
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Hey, World-Changer!",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Hey, World-Changer!",
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "With just ₱40.00 you can share a meal with someone in need.",
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "With just ₱40.00 you can share a meal with someone in need.",
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
-                ],
+                ),
+                // Placeholder widgets for your sections
+                FeaturedGoalsSection(),
+                PowerToEndHungerSection(),
+                InviteFriendsSection(),
+                GetToKnowUsSection(),
+                DonationBreakdownSection(),
+                EmergencyAidSection(),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+
+          // Sticky Reward Icon (Hidden When X is Clicked)
+          if (showRewardIcon)
+            Positioned(
+              left: xPos,
+              top: yPos,
+              child: GestureDetector(
+                onPanUpdate: (details) {
+                  setState(() {
+                    xPos += details.delta.dx;
+                    yPos += details.delta.dy;
+                  });
+                },
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    // Gamification Navigation (Rewards Icon)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => GamificationPage()),
+                        );
+                      },
+                      child: Image.asset(
+                        'lib/images/coin.png', // Ensure the asset is added correctly
+                        width: 80, // Adjust size as needed
+                        height: 80,
+                      ),
+                    ),
+
+                    // X Button (Closes Both Icons for 1 Minute)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showRewardIcon = false; // Hide both elements
+                          });
+
+                          // Timer to show them again after 1 minute
+                          Timer(Duration(minutes: 1), () {
+                            setState(() {
+                              showRewardIcon =
+                                  true; // Show reward icon & X button
+                            });
+                          });
+                        },
+                        child: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: Colors.black54,
+                          child:
+                              Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            // Placeholder widgets for your sections
-            FeaturedGoalsSection(),
-            PowerToEndHungerSection(),
-            InviteFriendsSection(),
-            GetToKnowUsSection(),
-            DonationBreakdownSection(),
-            EmergencyAidSection(),
-            const SizedBox(height: 20),
-          ],
-        ),
+        ],
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
@@ -94,7 +167,7 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (context) => DonationPage()),
             );
           } else if (index == 2) {
-            // Navigate to Notification Page
+            // Navigate to Request Page
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => RequestPage()),
@@ -264,9 +337,10 @@ class GoalCard extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ReadMorePage()),
-                      );
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ReadMorePage()),
+                          );
                         }, // Navigate to more details
                         child: Text("Read More",
                             style: TextStyle(color: Colors.blue)),
