@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'exchangecoin_page.dart';
 
 class GamificationPage extends StatelessWidget {
   @override
@@ -8,7 +9,7 @@ class GamificationPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.green,
         title: const Text(
-          'Gamification',
+          '',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -21,7 +22,10 @@ class GamificationPage extends StatelessWidget {
             // PantryPal Rewards Title
             Text(
               "PantryPal Rewards",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[900]),
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[900]),
             ),
             const SizedBox(height: 10),
 
@@ -41,7 +45,10 @@ class GamificationPage extends StatelessWidget {
                     SizedBox(width: 5),
                     Text(
                       "Your Coins 150",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14),
                     ),
                   ],
                 ),
@@ -63,7 +70,8 @@ class GamificationPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                         decoration: BoxDecoration(
                           color: Colors.purple,
                           borderRadius: BorderRadius.circular(12),
@@ -81,9 +89,11 @@ class GamificationPage extends StatelessWidget {
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: Text("Claim", style: TextStyle(color: Colors.white)),
+                        child: Text("Claim",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -100,7 +110,8 @@ class GamificationPage extends StatelessWidget {
                         left: 0,
                         child: Container(
                           height: 4,
-                          width: MediaQuery.of(context).size.width * 0.3, // Adjust based on claimed rewards
+                          width: MediaQuery.of(context).size.width *
+                              0.3, // Adjust based on claimed rewards
                           color: Colors.orange,
                         ),
                       ),
@@ -110,12 +121,24 @@ class GamificationPage extends StatelessWidget {
                           return Column(
                             children: [
                               CircleAvatar(
-                                backgroundColor: index < 2 ? Colors.orange : Colors.grey[300],
+                                backgroundColor: index < 2
+                                    ? Colors.orange
+                                    : Colors.grey[300],
                                 radius: 14,
-                                child: Icon(Icons.monetization_on, color: Colors.white, size: 16),
+                                child: Icon(Icons.monetization_on,
+                                    color: Colors.white, size: 16),
                               ),
                               SizedBox(height: 4),
-                              Text(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index],
+                              Text(
+                                  [
+                                    "Mon",
+                                    "Tue",
+                                    "Wed",
+                                    "Thu",
+                                    "Fri",
+                                    "Sat",
+                                    "Sun"
+                                  ][index],
                                   style: TextStyle(fontSize: 12)),
                             ],
                           );
@@ -131,30 +154,77 @@ class GamificationPage extends StatelessWidget {
             // Exchange and Donate Coins Button
             Center(
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DonateCoinsPage()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                 ),
                 child: Text(
                   "Exchange and Donate your Coins",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
                 ),
               ),
             ),
             const SizedBox(height: 15),
+            Text(
+              "Tasks",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[900]),
+            ),
+            const SizedBox(height: 10),
 
             // Task List
             Expanded(
               child: ListView(
                 children: [
-                  _buildTaskCard("Great Reader", "Read any article within 5 minutes!", 50, "lib/images/read 1.png", true),
-                  _buildTaskCard("Great Sympathy", "Read about typhoon-affected families.", 100, "lib/images/typhoon 1.png", false),
-                  _buildTaskCard("Malnutrition Awareness", "Read about malnutrition in Mindanao.", 100, "lib/images/Famine-hunger-scarcity-foodcrises-foodcrisis-poverty-malnutrition-starvation-foodscarcity-512 1.png", false),
-                  _buildTaskCard("Love For Animals", "Support animal food programs.", 100, "lib/images/dog-and-cat-paws-with-sharp-claws-cute-animal-footprints-png 1.png", false),
-                  _buildTaskCard("Love For Orphans", "Read about orphan support.", 100, "lib/images/Kids-Download-PNG 1.png", false),
-                  _buildTaskCard("Care For People Who Need Help", "Watch documented videos.", 150, "lib/images/4530515 1.png", false),
+                  _buildTaskCard(
+                      "Great Reader",
+                      "Read any article within 5 minutes!",
+                      50,
+                      "lib/images/read 1.png",
+                      true),
+                  _buildTaskCard(
+                      "Great Sympathy",
+                      "Read about typhoon-affected families.",
+                      100,
+                      "lib/images/typhoon 1.png",
+                      false),
+                  _buildTaskCard(
+                      "Malnutrition Awareness",
+                      "Read about malnutrition in Mindanao.",
+                      100,
+                      "lib/images/Famine-hunger-scarcity-foodcrises-foodcrisis-poverty-malnutrition-starvation-foodscarcity-512 1.png",
+                      false),
+                  _buildTaskCard(
+                      "Love For Animals",
+                      "Support animal food programs.",
+                      100,
+                      "lib/images/dog-and-cat-paws-with-sharp-claws-cute-animal-footprints-png 1.png",
+                      false),
+                  _buildTaskCard(
+                      "Love For Orphans",
+                      "Read about orphan support.",
+                      100,
+                      "lib/images/Kids-Download-PNG 1.png",
+                      false),
+                  _buildTaskCard(
+                      "Care For People Who Need Help",
+                      "Watch documented videos.",
+                      150,
+                      "lib/images/4530515 1.png",
+                      false),
                 ],
               ),
             ),
@@ -164,7 +234,8 @@ class GamificationPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTaskCard(String title, String description, int points, String iconPath, bool isClaimable) {
+  Widget _buildTaskCard(String title, String description, int points,
+      String iconPath, bool isClaimable) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -174,17 +245,48 @@ class GamificationPage extends StatelessWidget {
           radius: 24,
           child: Image.asset(iconPath, width: 30, height: 30),
         ),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(description, style: TextStyle(fontSize: 12)),
+        title: Text(title,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(description, style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.monetization_on,
+                    color: _getCoinColor(points), size: 16),
+                const SizedBox(width: 4),
+                Text("Earn $points coins!",
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _getCoinColor(points))),
+              ],
+            ),
+          ],
+        ),
         trailing: ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
             backgroundColor: isClaimable ? Colors.orange : Colors.purple,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: Text(isClaimable ? "Claim" : "Go", style: TextStyle(color: Colors.white, fontSize: 12)),
+          child: Text(isClaimable ? "Claim" : "Go",
+              style: TextStyle(color: Colors.white, fontSize: 12)),
         ),
       ),
     );
+  }
+
+  Color _getCoinColor(int points) {
+    if (points <= 50) {
+      return Colors.green;
+    } else if (points <= 100) {
+      return Colors.blue;
+    } else {
+      return Colors.red;
+    }
   }
 }
