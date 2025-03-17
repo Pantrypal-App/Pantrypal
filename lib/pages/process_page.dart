@@ -30,7 +30,7 @@ class ProcessPage extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: Colors.yellow[200],
+                color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(12.0),
               ),
               child: Column(
@@ -52,9 +52,9 @@ class ProcessPage extends StatelessWidget {
                   SizedBox(height: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: const Color.fromARGB(157, 0, 255, 68),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       padding:
                           EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -68,7 +68,7 @@ class ProcessPage extends StatelessWidget {
                     },
                     child: Text(
                       'Donate Now',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(color: Colors.black, fontSize: 16),
                     ),
                   ),
                 ],

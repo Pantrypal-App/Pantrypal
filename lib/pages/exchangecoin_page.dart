@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+
 
 class DonateCoinsPage extends StatelessWidget {
   @override
@@ -140,8 +140,6 @@ class HexagonClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     double w = size.width;
     double h = size.height;
-    double side = w / 2;
-    double height = side * sqrt(3);
 
     Path path = Path()
       ..moveTo(w * 0.5, 0)
@@ -158,3 +156,4 @@ class HexagonClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
+

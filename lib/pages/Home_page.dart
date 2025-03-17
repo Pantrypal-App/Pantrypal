@@ -354,13 +354,13 @@ class GoalCard extends StatelessWidget {
                           );
                         }, // Navigate to donation
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.orange, // Button background color
+                          backgroundColor: const Color.fromARGB(
+                              195, 0, 255, 68), // Button background color
                           foregroundColor:
                               Colors.black, // Text color set to black
                           shape: RoundedRectangleBorder(
                             // Makes it a rectangle
-                            borderRadius: BorderRadius.zero,
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         child: Text("Donate"),
@@ -622,12 +622,12 @@ class GetToKnowUsSection extends StatelessWidget {
                         child: Text("Read More"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Colors.orange, // Button background color
+                              Colors.blue, // Button background color
                           foregroundColor:
                               Colors.black, // Text color set to black
                           shape: RoundedRectangleBorder(
                             // Makes it a rectangle
-                            borderRadius: BorderRadius.zero,
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
@@ -693,7 +693,8 @@ class DonationBreakdownSection extends StatelessWidget {
                           },
                           child: Text("Learn More"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor:
+                                const Color.fromRGBO(33, 150, 243, 1),
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -806,13 +807,16 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                                   builder: (context) => ReadMorePage()),
                             );
                           },
-                          child: Text("Read More"),
+                          child: Text(
+                            "Read More",
+                            style: TextStyle(
+                                color: Colors.black), 
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 127, 125, 123),
+                            backgroundColor: const Color.fromARGB(216, 33, 149, 243),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.zero,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),

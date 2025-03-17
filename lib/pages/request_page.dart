@@ -21,15 +21,17 @@ class _RequestPageState extends State<RequestPage> {
     "FOOD": false,
     "MEDICINE": false,
     "ANIMAL FOOD": false,
+    "OTHER": false,
   };
+  
+  TextEditingController otherController = TextEditingController();
 
   final Map<String, String> donationImages = {
     "MONEY": "lib/images/pig 2.png",
     "CLOTHES": "lib/images/clothe 2.png",
     "FOOD": "lib/images/food 2.png",
-    "MEDICINE":
-        "lib/images/medicine-bottle-cartoon-rendering-3d-modeling-generative-ai-free-png 2.png",
-    "ANIMAL FOOD": "lib/images/cat-food-graphic-clipart-design-free-png 2.png",
+    "MEDICINE": "lib/images/medicine 2.png",
+    "ANIMAL FOOD": "lib/images/animal-food 2.png",
   };
 
   final List<TabItem> items = [
@@ -95,6 +97,11 @@ class _RequestPageState extends State<RequestPage> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               _buildDonationSelection(),
+              if (selectedDonations["OTHER"] == true)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: _buildTextField("Specify Other Donation", controller: otherController),
+                ),
               SizedBox(height: 16),
               _buildTextField("Additional Information"),
               SizedBox(height: 16),
@@ -119,8 +126,9 @@ class _RequestPageState extends State<RequestPage> {
     );
   }
 
-  Widget _buildTextField(String label) {
+  Widget _buildTextField(String label, {TextEditingController? controller}) {
     return TextField(
+      controller: controller,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(),
@@ -149,65 +157,24 @@ class _RequestPageState extends State<RequestPage> {
   Widget _buildDonationSelection() {
     return Column(
       children: [
-        GridView.count(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.3, // Adjusted for smaller size
-          children: [
-            _buildDonationType("MONEY", "lib/images/pig 2.png", Colors.yellow),
-            _buildDonationType(
-                "CLOTHES", "lib/images/clothe 2.png", Colors.blue),
-            _buildDonationType("FOOD", "lib/images/food 2.png", Colors.red),
-            _buildDonationType(
-                "MEDICINE", "lib/images/medicine 2.png", Colors.lightBlue),
-          ],
-        ),
-        SizedBox(height: 8),
-        // Centered Animal Food at the bottom
-        Align(
-          alignment: Alignment.center,
-          child: _buildDonationType(
-              "ANIMAL FOOD", "lib/images/animal-food 2.png", Colors.brown,
-              isFullWidth: true),
-        ),
+        ...selectedDonations.keys.map((label) => _buildDonationType(label)),
       ],
     );
   }
 
-  Widget _buildDonationType(String label, String assetPath, Color bgColor,
-      {bool isFullWidth = false}) {
-    return Container(
-      width: isFullWidth ? 160 : null,
-      padding: EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [BoxShadow(color: Colors.grey, blurRadius: 2)],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(assetPath, width: 40, height: 40, fit: BoxFit.contain),
-          SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Checkbox(
-                value: selectedDonations[label] ?? false,
-                onChanged: (value) {
-                  setState(() {
-                    selectedDonations[label] = value!;
-                  });
-                },
-              ),
-              Text(label,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ],
+  Widget _buildDonationType(String label) {
+    return ListTile(
+      leading: donationImages.containsKey(label)
+          ? Image.asset(donationImages[label]!, width: 40, height: 40)
+          : Icon(Icons.add_circle, size: 40, color: Colors.grey),
+      title: Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      trailing: Checkbox(
+        value: selectedDonations[label] ?? false,
+        onChanged: (value) {
+          setState(() {
+            selectedDonations[label] = value!;
+          });
+        },
       ),
     );
   }

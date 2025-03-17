@@ -62,7 +62,7 @@ class _DonationListPageState extends State<DonationListPage> {
                 hintText: "Search city...",
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: const Color.fromARGB(255, 220, 220, 220),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
