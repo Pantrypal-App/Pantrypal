@@ -47,7 +47,7 @@ class _DonationPageState extends State<DonationPage> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(151, 0, 255, 68),
+                    backgroundColor: const Color.fromARGB(98, 0, 255, 68),
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -345,7 +345,7 @@ class GoalCard extends StatelessWidget {
                         }, // Navigate to donation
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              const Color.fromARGB(195, 0, 255, 68),
+                              const Color.fromARGB(93, 0, 255, 68),
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),

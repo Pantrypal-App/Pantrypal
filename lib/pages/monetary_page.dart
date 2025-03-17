@@ -191,9 +191,9 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: const Color.fromARGB(93, 0, 255, 68),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text('Donate',
                 style: TextStyle(color: Colors.white, fontSize: 12)),

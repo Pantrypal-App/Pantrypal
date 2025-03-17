@@ -78,7 +78,7 @@ class ReadMorePage extends StatelessWidget {
                   Center(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                         padding:
                             EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                       ),

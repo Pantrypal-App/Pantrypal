@@ -354,8 +354,7 @@ class GoalCard extends StatelessWidget {
                           );
                         }, // Navigate to donation
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(
-                              195, 0, 255, 68), // Button background color
+                          backgroundColor: const Color.fromARGB(93, 0, 255, 68), // Button background color
                           foregroundColor:
                               Colors.black, // Text color set to black
                           shape: RoundedRectangleBorder(
@@ -624,7 +623,7 @@ class GetToKnowUsSection extends StatelessWidget {
                           backgroundColor:
                               Colors.blue, // Button background color
                           foregroundColor:
-                              Colors.black, // Text color set to black
+                              Colors.white, // Text color set to black
                           shape: RoundedRectangleBorder(
                             // Makes it a rectangle
                             borderRadius: BorderRadius.circular(8),
@@ -695,7 +694,7 @@ class DonationBreakdownSection extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 const Color.fromRGBO(33, 150, 243, 1),
-                            foregroundColor: Colors.black,
+                            foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -810,7 +809,7 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                           child: Text(
                             "Read More",
                             style: TextStyle(
-                                color: Colors.black), 
+                                color: Colors.white), 
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color.fromARGB(216, 33, 149, 243),

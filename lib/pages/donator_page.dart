@@ -89,7 +89,7 @@ class _DonatorPageState extends State<DonatorPage> {
                   // Handle donation submission
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.yellow[700],
+                  backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                   padding: EdgeInsets.symmetric(vertical: 12),
                   textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),

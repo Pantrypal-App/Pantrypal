@@ -52,7 +52,7 @@ class ProcessPage extends StatelessWidget {
                   SizedBox(height: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(157, 0, 255, 68),
+                      backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),

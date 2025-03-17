@@ -184,7 +184,7 @@ class _RequestPageState extends State<RequestPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _styledButton("Cancel", Colors.grey),
-        _styledButton("Submit", Colors.green),
+        _styledButton("Submit", const Color.fromARGB(93, 0, 255, 68)),
       ],
     );
   }

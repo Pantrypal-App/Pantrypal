@@ -69,7 +69,7 @@ class _Donator2PageState extends State<Donator2Page> {
             SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                 minimumSize: Size(double.infinity, 50),
               ),
               onPressed: () {
