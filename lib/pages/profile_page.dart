@@ -208,7 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: Colors.white),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      hintText: "Enter your username",
+                      hintText: "Enter your name",
                       hintStyle: TextStyle(color: Colors.white70),
                     ),
                     onSubmitted: (value) => _updateUsername(),
