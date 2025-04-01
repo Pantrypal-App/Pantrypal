@@ -1,34 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'register_page.dart';
 import 'Home_page.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Function to handle login
+  Future<void> login() async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Login Successful!"),
+        backgroundColor: Colors.green,
+      ));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Error: ${e.toString()}"),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(
-                    "lib/images/iPhone 14 & 15 Pro - 31.jpg"),
+                image: AssetImage("lib/images/iPhone 14 & 15 Pro - 31.jpg"),
                 fit: BoxFit.cover,
               ),
             ),
           ),
-
-          // Login Form
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Log In Title
                   const Text(
                     "Log In",
                     style: TextStyle(
@@ -41,6 +70,7 @@ class LoginPage extends StatelessWidget {
 
                   // Email TextField
                   TextField(
+                    controller: emailController,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.email),
                       labelText: "Email",
@@ -53,6 +83,7 @@ class LoginPage extends StatelessWidget {
 
                   // Password TextField
                   TextField(
+                    controller: passwordController,
                     obscureText: true,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock),
@@ -79,16 +110,10 @@ class LoginPage extends StatelessWidget {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => HomePage()),
-                        );
-                      },
+                      onPressed: login, // Call login function
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.white, // White button background
-                        side: const BorderSide(
-                            color: Colors.grey), // Border color
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.grey),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -113,7 +138,6 @@ class LoginPage extends StatelessWidget {
                       const Text("Don’t have an account?"),
                       TextButton(
                         onPressed: () {
-                          // Navigate to Register Page
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -146,7 +170,7 @@ class LoginPage extends StatelessWidget {
                               ),
                             ),
                             icon: Image.asset(
-                              "lib/images/images-removebg-preview (3).png", // Ensure correct path
+                              "lib/images/images-removebg-preview (3).png",
                               height: 20,
                             ),
                             label: const Text("Google",
@@ -155,7 +179,7 @@ class LoginPage extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(width: 10), // Space between buttons
+                      const SizedBox(width: 10),
 
                       // Facebook Button
                       Expanded(
@@ -171,7 +195,7 @@ class LoginPage extends StatelessWidget {
                               ),
                             ),
                             icon: Image.asset(
-                              "lib/images/Facebook-Logosu-removebg-preview.png", // Ensure correct path
+                              "lib/images/Facebook-Logosu-removebg-preview.png",
                               height: 20,
                             ),
                             label: const Text("Facebook",
