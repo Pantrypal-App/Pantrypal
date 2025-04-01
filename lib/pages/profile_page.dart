@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
 import 'AccountDetailsPage.dart';
@@ -19,6 +20,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   int selectedIndex = 4;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _user;
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
@@ -27,6 +30,18 @@ class _ProfilePageState extends State<ProfilePage> {
     TabItem(icon: Icons.notifications, title: 'Notification'),
     TabItem(icon: Icons.person, title: 'You'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUser();
+  }
+
+  void _getCurrentUser() {
+    setState(() {
+      _user = _auth.currentUser;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +80,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text("Username",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                Text("Example@gmail.com",
-                    style: TextStyle(fontSize: 14, color: Colors.white70)),
+                Text(
+                  _user?.displayName ?? "Username",
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Text(
+                  _user?.email ?? "No email found",
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -140,7 +157,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: TextStyle(
                               color: Colors.red, fontWeight: FontWeight.bold)),
                       leading: const Icon(Icons.logout, color: Colors.red),
-                      onTap: () {
+                      onTap: () async {
+                        await _auth.signOut();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => LoginPage()),
@@ -159,8 +177,7 @@ class _ProfilePageState extends State<ProfilePage> {
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
         backgroundColor:
-            Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
-                Colors.black,
+            Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.black,
         color: themeProvider.isNightMode ? Colors.white : Colors.black,
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
@@ -169,20 +186,18 @@ class _ProfilePageState extends State<ProfilePage> {
             Navigator.pushReplacement(
                 context, MaterialPageRoute(builder: (context) => HomePage()));
           } else if (index == 1) {
-            // Navigate to Donate Page
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => DonationPage()),
             );
           } else if (index == 2) {
-            // Navigate to Notification Page
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => RequestPage()),
             );
           } else if (index == 3) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => NotificationPage()));
+            Navigator.pushReplacement(
+                context, MaterialPageRoute(builder: (context) => NotificationPage()));
           } else {
             setState(() {
               selectedIndex = index;
@@ -209,8 +224,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildToggleOption(
-      IconData icon, String title, bool value, Function(bool) onChanged) {
+  Widget _buildToggleOption(IconData icon, String title, bool value, Function(bool) onChanged) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
