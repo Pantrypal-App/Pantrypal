@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 class DonateCoinsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -20,7 +19,7 @@ class DonateCoinsPage extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: Colors.blue,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -77,7 +76,7 @@ class DonateCoinsPage extends StatelessWidget {
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
@@ -124,6 +123,8 @@ class DonateCoinsPage extends StatelessWidget {
               onPressed: () {},
               child: Text("Donate"),
               style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(93, 0, 255, 68),
+                foregroundColor: Colors.black,
                 padding: EdgeInsets.symmetric(vertical: 10),
               ),
             ),
@@ -156,4 +157,3 @@ class HexagonClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
-

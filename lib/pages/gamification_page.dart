@@ -35,7 +35,7 @@ class GamificationPage extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: Colors.blue,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -73,7 +73,7 @@ class GamificationPage extends StatelessWidget {
                         padding:
                             EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                         decoration: BoxDecoration(
-                          color: Colors.purple,
+                          color: Colors.blue,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -88,7 +88,7 @@ class GamificationPage extends StatelessWidget {
                       ElevatedButton(
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
+                          backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -161,7 +161,7 @@ class GamificationPage extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.blue,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
@@ -269,7 +269,7 @@ class GamificationPage extends StatelessWidget {
         trailing: ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
-            backgroundColor: isClaimable ? Colors.orange : Colors.purple,
+            backgroundColor: isClaimable ? const Color.fromARGB(93, 0, 255, 68) : Colors.blue,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
