@@ -4,6 +4,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'profile_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'Home_page.dart';
 import 'Donate_page.dart';
 import 'Notification_page.dart';
@@ -23,7 +25,7 @@ class _RequestPageState extends State<RequestPage> {
     "ANIMAL FOOD": false,
     "OTHER": false,
   };
-  
+
   TextEditingController otherController = TextEditingController();
 
   final Map<String, String> donationImages = {
@@ -33,6 +35,18 @@ class _RequestPageState extends State<RequestPage> {
     "MEDICINE": "lib/images/medicine 2.png",
     "ANIMAL FOOD": "lib/images/animal-food 2.png",
   };
+  Future<String> getProfilePhotoUrl() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      return userDoc.get('profilePic') ?? '';
+    }
+    return '';
+  }
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
@@ -77,10 +91,28 @@ class _RequestPageState extends State<RequestPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, size: 40, color: Colors.white),
+                child: FutureBuilder<String>(
+                  future: getProfilePhotoUrl(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.grey[300],
+                        child: CircularProgressIndicator(),
+                      );
+                    } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                      return CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.grey[300],
+                        child: Icon(Icons.person, size: 40, color: Colors.white),
+                      );
+                    } else {
+                      return CircleAvatar(
+                        radius: 40,
+                        backgroundImage: NetworkImage(snapshot.data!),
+                      );
+                    }
+                  },
                 ),
               ),
               SizedBox(height: 16),
@@ -100,7 +132,8 @@ class _RequestPageState extends State<RequestPage> {
               if (selectedDonations["OTHER"] == true)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: _buildTextField("Specify Other Donation", controller: otherController),
+                  child: _buildTextField("Specify Other Donation",
+                      controller: otherController),
                 ),
               SizedBox(height: 16),
               _buildTextField("Additional Information"),
@@ -167,7 +200,8 @@ class _RequestPageState extends State<RequestPage> {
       leading: donationImages.containsKey(label)
           ? Image.asset(donationImages[label]!, width: 40, height: 40)
           : Icon(Icons.add_circle, size: 40, color: Colors.grey),
-      title: Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      title: Text(label,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       trailing: Checkbox(
         value: selectedDonations[label] ?? false,
         onChanged: (value) {
