@@ -27,6 +27,8 @@ class _RequestPageState extends State<RequestPage> {
   };
 
   TextEditingController otherController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
+  TextEditingController addressController = TextEditingController();
 
   final Map<String, String> donationImages = {
     "MONEY": "lib/images/pig 2.png",
@@ -46,6 +48,56 @@ class _RequestPageState extends State<RequestPage> {
       return userDoc.get('profilePic') ?? '';
     }
     return '';
+  }
+
+  Future<void> saveRequestData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        // Collect selected donation types
+        List<String> donationTypes = selectedDonations.keys
+            .where((key) => selectedDonations[key] == true)
+            .toList();
+
+        // Add the "other" donation if it's selected
+        if (selectedDonations["OTHER"] == true &&
+            otherController.text.isNotEmpty) {
+          donationTypes.add("OTHER: ${otherController.text}");
+        }
+        if (nameController.text.isEmpty || addressController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Name and Address are required!"),
+            backgroundColor: Colors.red,
+          ));
+          return; // Exit if name or address is empty
+        }
+        print("Name: ${nameController.text}");
+      print("Address: ${addressController.text}");
+      print("Donations: $donationTypes");
+
+
+        // Save data to Firestore under the "requests" collection
+        await FirebaseFirestore.instance.collection('requests').add({
+          'userId': user.uid,
+          'name': nameController.text,
+          'address': addressController.text,
+          'donations': donationTypes,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        // Optional: Show a success message
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Request submitted successfully!"),
+          backgroundColor: Colors.green,
+        ));
+      } catch (e) {
+        // Show error message if saving fails
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Failed to submit request: $e"),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
   }
 
   final List<TabItem> items = [
@@ -100,11 +152,14 @@ class _RequestPageState extends State<RequestPage> {
                         backgroundColor: Colors.grey[300],
                         child: CircularProgressIndicator(),
                       );
-                    } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                    } else if (snapshot.hasError ||
+                        !snapshot.hasData ||
+                        snapshot.data!.isEmpty) {
                       return CircleAvatar(
                         radius: 40,
                         backgroundColor: Colors.grey[300],
-                        child: Icon(Icons.person, size: 40, color: Colors.white),
+                        child:
+                            Icon(Icons.person, size: 40, color: Colors.white),
                       );
                     } else {
                       return CircleAvatar(
@@ -119,9 +174,9 @@ class _RequestPageState extends State<RequestPage> {
               Text("ASK FOR DONATIONS!",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              _buildTextField("Full Name"),
+              _buildTextField("Full Name", controller: nameController),
               SizedBox(height: 8),
-              _buildTextField("Address"),
+              _buildTextField("Address", controller: addressController),
               SizedBox(height: 16),
               _buildMapView(),
               SizedBox(height: 16),
@@ -225,12 +280,34 @@ class _RequestPageState extends State<RequestPage> {
 
   Widget _styledButton(String text, Color color) {
     return ElevatedButton(
-      onPressed: () {},
+      onPressed: () {
+        if (text == "Submit") {
+          saveRequestData(); // Call saveRequestData when Submit is pressed
+        } else if (text == "Cancel") {
+          // You can either clear the form or navigate to another page
+          setState(() {
+            nameController.clear();
+            addressController.clear();
+            otherController.clear();
+            selectedDonations = {
+              "MONEY": false,
+              "CLOTHES": false,
+              "FOOD": false,
+              "MEDICINE": false,
+              "ANIMAL FOOD": false,
+              "OTHER": false,
+            };
+          });
+        }
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       ),
-      child: Text(text, style: TextStyle(color: Colors.black)),
+      child: Text(
+        text, // Make sure the 'text' parameter is passed correctly
+        style: TextStyle(color: Colors.black),
+      ),
     );
   }
 }
