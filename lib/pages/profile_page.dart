@@ -48,21 +48,24 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _getCurrentUser() async {
-    setState(() {
-      _user = _auth.currentUser;
-      _nameController.text = _user?.displayName ?? "";
-    });
-    DocumentSnapshot userDoc = await _firestore.collection("users").doc(_user?.uid).get();
+  setState(() {
+    _user = _auth.currentUser;
+    _nameController.text = _user?.displayName ?? "";
+  });
+
+  if (_user != null) {
+    DocumentSnapshot userDoc = await _firestore.collection("users").doc(_user!.uid).get();
     if (userDoc.exists) {
       String? profilePic = userDoc["profilePic"];
       if (profilePic != null) {
         setState(() {
-          _user = _auth.currentUser;
+        _user = _auth.currentUser;
           _user!.updatePhotoURL(profilePic);
         });
       }
     }
   }
+}
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
