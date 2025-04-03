@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'register_page.dart';
 import 'Home_page.dart';
 
@@ -15,7 +16,46 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+ Future<User?> signInWithGoogle() async {
+  try {
+    // Trigger the Google Sign-In flow
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      return null; // User canceled the sign-in
+    }
+
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    // Sign in with Google credentials
+    final UserCredential userCredential =
+        await _auth.signInWithCredential(credential);
+    final User? user = userCredential.user;
+
+    // If the user is null, show an error
+    if (user == null) {
+      return null; // Sign-in failed, handle it here
+    }
+
+    // Save user info in Firebase Firestore (optional)
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'email': user.email,
+      'name': user.displayName,
+      'profilePic': user.photoURL,
+    }, SetOptions(merge: true));
+
+    return user;
+  } catch (e) {
+    print("Google Sign-In Error: $e");
+    return null; // Handle the error here if needed
+  }
+}
   // Function to handle login
   Future<void> login() async {
     try {
@@ -161,7 +201,26 @@ class _LoginPageState extends State<LoginPage> {
                         child: SizedBox(
                           height: 50,
                           child: ElevatedButton.icon(
-                            onPressed: () {},
+                            onPressed: () async {
+                              User? user = await signInWithGoogle();
+                              if (user != null) {
+                                // Navigate to HomePage after successful login
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => HomePage()),
+                                );
+                              } else {
+                                // Handle failed sign-in
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        "Google Sign-In failed! Please try again."),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               side: const BorderSide(color: Colors.grey),
