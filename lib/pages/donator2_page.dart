@@ -56,7 +56,7 @@ class _Donator2PageState extends State<Donator2Page> {
       double latitude = 14.1084;
       double longitude = 121.1416;
 
-      await FirebaseFirestore.instance.collection('donations').add({
+      await FirebaseFirestore.instance.collection('monetary_donations').add({
         'name': name,
         'payment_method': selectedPayment,
         'e_wallet_number': eWalletNumber,
