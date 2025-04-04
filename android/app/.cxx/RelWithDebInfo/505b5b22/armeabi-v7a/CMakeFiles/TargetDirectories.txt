@@ -1,0 +1,2 @@
+D:/Capstone/Pantrypal/android/app/.cxx/RelWithDebInfo/505b5b22/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/Capstone/Pantrypal/android/app/.cxx/RelWithDebInfo/505b5b22/armeabi-v7a/CMakeFiles/rebuild_cache.dir
