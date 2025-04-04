@@ -18,13 +18,25 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+  String _passwordError = '';
+  String _confirmPasswordError = '';
+
   Future<void> _registerUser() async {
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
 
+    setState(() {
+      _passwordError = '';
+      _confirmPasswordError = '';
+    });
+
     if (password != confirmPassword) {
-      _showErrorDialog("Passwords do not match!");
+      setState(() {
+        _confirmPasswordError = "Passwords do not match!";
+      });
       return;
     }
 
@@ -112,24 +124,56 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: !_passwordVisible,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _passwordVisible = !_passwordVisible;
+                          });
+                        },
+                      ),
                       labelText: "Password",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
+                  const SizedBox(height: 5),
+                  if (_passwordError.isNotEmpty)
+                    Text(
+                      _passwordError,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
                   const SizedBox(height: 15),
 
                   TextField(
                     controller: _confirmPasswordController,
-                    obscureText: true,
+                    obscureText: !_confirmPasswordVisible,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _confirmPasswordVisible = !_confirmPasswordVisible;
+                          });
+                        },
+                      ),
                       labelText: "Confirm Password",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
+                  const SizedBox(height: 5),
+                  if (_confirmPasswordError.isNotEmpty)
+                    Text(
+                      _confirmPasswordError,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
                   const SizedBox(height: 20),
 
                   SizedBox(
