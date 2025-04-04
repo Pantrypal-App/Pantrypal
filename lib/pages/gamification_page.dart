@@ -1,7 +1,76 @@
 import 'package:flutter/material.dart';
 import 'exchangecoin_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class GamificationPage extends StatelessWidget {
+class GamificationPage extends StatefulWidget {
+  @override
+  _GamificationPageState createState() => _GamificationPageState();
+}
+
+class _GamificationPageState extends State<GamificationPage> {
+  final List<String> rewardDays = [
+    "Day 1",
+    "Day 2",
+    "Day 3",
+    "Day 4",
+    "Day 5",
+    "Day 6",
+    "Day 7"
+  ];
+
+  List<String> claimedDays = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClaimedDays();
+  }
+
+  Future<void> _loadClaimedDays() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> savedClaimedDays = prefs.getStringList('claimedDays') ?? [];
+    setState(() {
+      claimedDays = savedClaimedDays;
+    });
+  }
+
+  Future<void> _saveClaimedDays() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('claimedDays', claimedDays);
+  }
+
+  void claimTodayReward() async {
+    DateTime now = DateTime.now();
+    String today = "${now.year}-${now.month}-${now.day}";
+
+    // Check if the reward was already claimed today
+    if (claimedDays.contains(today)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You have already claimed your reward for today!'),
+        ),
+      );
+      return;
+    }
+
+    // Simulate claiming the reward
+    if (claimedDays.length < 7) {
+      setState(() {
+        claimedDays.add(today);
+      });
+
+      // Save the updated claimed days
+      await _saveClaimedDays();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Successfully claimed reward for ${rewardDays[claimedDays.length - 1]}!'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,9 +155,15 @@ class GamificationPage extends StatelessWidget {
                         ),
                       ),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: claimedDays.contains(
+                                "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}")
+                            ? null
+                            : claimTodayReward,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(93, 0, 255, 68),
+                          backgroundColor: claimedDays.contains(
+                                  "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}")
+                              ? Colors.grey
+                              : const Color.fromARGB(93, 0, 255, 68),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -111,7 +186,8 @@ class GamificationPage extends StatelessWidget {
                         child: Container(
                           height: 4,
                           width: MediaQuery.of(context).size.width *
-                              0.3, // Adjust based on claimed rewards
+                              (claimedDays.length / 7),
+                          // Adjust based on claimed rewards
                           color: Colors.orange,
                         ),
                       ),
@@ -121,7 +197,7 @@ class GamificationPage extends StatelessWidget {
                           return Column(
                             children: [
                               CircleAvatar(
-                                backgroundColor: index < 2
+                                backgroundColor: claimedDays.length > index
                                     ? Colors.orange
                                     : Colors.grey[300],
                                 radius: 14,
@@ -130,16 +206,9 @@ class GamificationPage extends StatelessWidget {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                  [
-                                    "Mon",
-                                    "Tue",
-                                    "Wed",
-                                    "Thu",
-                                    "Fri",
-                                    "Sat",
-                                    "Sun"
-                                  ][index],
-                                  style: TextStyle(fontSize: 12)),
+                                rewardDays[index],
+                                style: TextStyle(fontSize: 12),
+                              ),
                             ],
                           );
                         }),
@@ -269,7 +338,9 @@ class GamificationPage extends StatelessWidget {
         trailing: ElevatedButton(
           onPressed: () {},
           style: ElevatedButton.styleFrom(
-            backgroundColor: isClaimable ? const Color.fromARGB(93, 0, 255, 68) : Colors.blue,
+            backgroundColor: isClaimable
+                ? const Color.fromARGB(93, 0, 255, 68)
+                : Colors.blue,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
