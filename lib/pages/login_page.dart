@@ -17,14 +17,28 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId:
+        '857082234698-50e42f0mpovfvdig2oga7485cibrpqol.apps.googleusercontent.com',
+  );
+
   bool _obscurePassword = true; // 👁️ Controls visibility
 
   String? emailError;
   String? passwordError;
 
+  // Sign out the user from Google and Firebase
+  Future<void> signOutGoogle() async {
+    await _googleSignIn.signOut();
+    await FirebaseAuth.instance.signOut();
+    print("User signed out from Google and Firebase.");
+  }
+
   Future<User?> signInWithGoogle() async {
     try {
+      // Sign out first to ensure a fresh login
+      await signOutGoogle();
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // User canceled the sign-in
 
@@ -41,12 +55,20 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user == null) return null;
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'email': user.email,
-        'name': user.displayName,
-        'profilePic': user.photoURL,
-      }, SetOptions(merge: true));
+      // Save user data in Firestore if it doesn't already exist
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
 
+      if (!userDoc.exists) {
+        await userRef.set({
+          'email': user.email,
+          'name': user.displayName,
+          'profilePic': user.photoURL,
+        }, SetOptions(merge: true));
+      }
+
+      // Automatically sign in the user if everything is successful
       return user;
     } catch (e) {
       print("Google Sign-In Error: $e");
@@ -243,18 +265,16 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
 
-                    // Sign Up Option
-                    // Sign Up Option
+                    // Google Button
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      // Google Button
                       Expanded(
                         child: SizedBox(
                           height: 50,
                           child: ElevatedButton.icon(
                             onPressed: () async {
+                              await signOutGoogle(); // Sign out before logging in again
                               User? user = await signInWithGoogle();
                               if (user != null) {
-                                // Navigate to HomePage after successful login
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
@@ -287,7 +307,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 10),
 
                       // Facebook Button
