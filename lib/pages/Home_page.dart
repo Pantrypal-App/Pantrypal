@@ -10,6 +10,8 @@ import 'process_page.dart';
 import 'readmore_page.dart';
 import 'gamification_page.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(PantryPalApp());
@@ -202,7 +204,67 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class FeaturedGoalsSection extends StatelessWidget {
+class FeaturedGoalsSection extends StatefulWidget {
+  @override
+  _FeaturedGoalsSectionState createState() => _FeaturedGoalsSectionState();
+}
+
+class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
+  List<dynamic> articles = [];
+  bool isLoading = true;
+  bool hasError = false;
+
+  final String apiKey =
+      'pub_787690833b3dce8966d8bb97f7422f54bfb23'; // Replace with your NewsData.io key
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNews();
+  }
+
+  Future<void> fetchNews() async {
+    try {
+      final url = Uri.parse(
+          'https://newsdata.io/api/1/news?apikey=pub_787690833b3dce8966d8bb97f7422f54bfb23&q=food%20&country=ph&language=pi  ');
+
+      final response = await http.get(url);
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final rawArticles = data['results'] ?? [];
+
+        // Filtering logic: Ensure the articles match the criteria for 2024-2025
+        final filteredArticles = rawArticles.where((article) {
+          final dateStr = article['pubDate'] ?? '';
+          if (dateStr.isEmpty) return false;
+
+          final pubDate = DateTime.tryParse(dateStr);
+          if (pubDate == null) return false;
+
+          return pubDate.year >= 2024 && pubDate.year <= 2025;
+        }).toList();
+
+        print('Filtered articles: $filteredArticles'); // Debugging line
+
+        setState(() {
+          articles = filteredArticles.isNotEmpty
+              ? filteredArticles
+              : rawArticles; // Update to filteredArticles
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load news');
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -218,52 +280,46 @@ class FeaturedGoalsSection extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               TextButton(
-                onPressed: () {}, // Navigate to more goals
+                onPressed: () {}, // Optional navigation
                 child: Text("See all", style: TextStyle(color: Colors.blue)),
               ),
             ],
           ),
           SizedBox(height: 10),
-
-          /// Increased the height to 350 for a taller box
           SizedBox(
-            height: 350, // Increased height for bigger cards
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                GoalCard(
-                  title: "Feed Families in Typhoon-Affected Areas",
-                  description:
-                      "Support families recovering from recent typhoons. Your help can bring hope and nourishment.",
-                  imagePath: 'lib/images/typhon.jpg',
-                ),
-                GoalCard(
-                  title: "Help Combat Malnutrition in Mindanao",
-                  description:
-                      "Provide nutritious meals to children in remote areas suffering from hunger and malnutrition.",
-                  imagePath: 'lib/images/malnutrition.jpg',
-                ),
-                GoalCard(
-                  title: "Empower Indigenous Communities with Food Assistance",
-                  description:
-                      "Support indigenous communities in the Philippines by donating life-saving meals.",
-                  imagePath: 'lib/images/indigenius.webp',
-                ),
-                GoalCard(
-                  title: "Create lifelong opportunities for children.",
-                  description:
-                      "Every child deserves to dream. Support orphanages to give love and care to those without family.",
-                  imagePath: 'lib/images/orphan 1.png',
-                ),
-                GoalCard(
-                  title: "Be a voice for the voiceless",
-                  description:
-                      "Animals need help too! Feel free to provide foods in animal shelters. Your generosity make all the difference.",
-                  imagePath: 'lib/images/dogs 1.png',
-                ),
-              ],
-            ),
-          ),
+              height: 350,
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : hasError
+                      ? Center(
+                          child: Text(
+                            "Failed to load news.",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: articles.length,
+                          itemBuilder: (context, index) {
+                            final article = articles[index];
+
+                            // Ensure you pass the article URL (if available in the API response)
+                            final articleUrl = article['link'] ??
+                                ''; // Assuming 'link' contains the article URL
+
+                            return GoalCard(
+                              title: article['title'] ?? 'No title',
+                              description:
+                                  article['description'] ?? 'No description',
+                              imagePath: article['image_url'] != null &&
+                                      article['image_url'].isNotEmpty
+                                  ? article['image_url']
+                                  : 'https://via.placeholder.com/300x160.png?text=No+Image',
+                              articleUrl:
+                                  articleUrl, // Pass the article URL here
+                            );
+                          },
+                        )),
         ],
       ),
     );
@@ -274,18 +330,20 @@ class GoalCard extends StatelessWidget {
   final String title;
   final String description;
   final String imagePath;
+  final String articleUrl; // Add article URL
 
   GoalCard({
     required this.title,
     required this.description,
     required this.imagePath,
+    required this.articleUrl, // Initialize article URL
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 300,
-      height: 320, // Increased card height
+      height: 320,
       margin: EdgeInsets.all(10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
@@ -293,33 +351,27 @@ class GoalCard extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.grey, blurRadius: 5)],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.max, // Forces the box to expand
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 160, // Increased image height
+            height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(10),
                 topRight: Radius.circular(10),
               ),
               image: DecorationImage(
-                image: AssetImage(imagePath),
+                image: imagePath.startsWith('http')
+                    ? NetworkImage(imagePath)
+                    : AssetImage(imagePath) as ImageProvider,
                 fit: BoxFit.cover,
-                onError: (error, stackTrace) => const Icon(
-                  Icons.broken_image,
-                  size: 50,
-                  color: Colors.grey,
-                ),
               ),
             ),
           ),
           Expanded(
-            // Allows text area to expand
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
-                mainAxisSize: MainAxisSize.max, // Pushes everything inside
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
@@ -330,18 +382,21 @@ class GoalCard extends StatelessWidget {
                       style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
                   ),
-                  SizedBox(height: 10), // Adjusted spacing
+                  SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
                         onPressed: () {
+                          // Pass the article URL to the ReadMorePage
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => ReadMorePage()),
+                              builder: (context) =>
+                                  ReadMorePage(articleUrl: articleUrl),
+                            ),
                           );
-                        }, // Navigate to more details
+                        },
                         child: Text("Read More",
                             style: TextStyle(color: Colors.blue)),
                       ),
@@ -352,13 +407,11 @@ class GoalCard extends StatelessWidget {
                             MaterialPageRoute(
                                 builder: (context) => ProcessPage()),
                           );
-                        }, // Navigate to donation
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(93, 0, 255, 68), // Button background color
-                          foregroundColor:
-                              Colors.black, // Text color set to black
+                          backgroundColor: Color.fromARGB(93, 0, 255, 68),
+                          foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
-                            // Makes it a rectangle
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
@@ -800,19 +853,15 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                         left: 10,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => ReadMorePage()),
-                            );
+
                           },
                           child: Text(
                             "Read More",
-                            style: TextStyle(
-                                color: Colors.white), 
+                            style: TextStyle(color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(216, 33, 149, 243),
+                            backgroundColor:
+                                const Color.fromARGB(216, 33, 149, 243),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
