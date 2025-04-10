@@ -215,7 +215,7 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
   bool hasError = false;
 
   final String apiKey =
-      'pub_787690833b3dce8966d8bb97f7422f54bfb23'; // Replace with your NewsData.io key
+      'a4b2de65ff5e632d3361fc3404f2f6a4'; // Replace with your NewsData.io key
 
   @override
   void initState() {
@@ -225,19 +225,19 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
 
   Future<void> fetchNews() async {
     try {
+      final query = 'food OR hunger OR health OR disaster';
       final url = Uri.parse(
-          'https://newsdata.io/api/1/news?apikey=pub_787690833b3dce8966d8bb97f7422f54bfb23&q=food%20&country=ph&language=pi  ');
+          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=a4b2de65ff5e632d3361fc3404f2f6a4');
 
       final response = await http.get(url);
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final rawArticles = data['results'] ?? [];
+        final rawArticles = data['articles'] ?? [];
 
-        // Filtering logic: Ensure the articles match the criteria for 2024-2025
         final filteredArticles = rawArticles.where((article) {
-          final dateStr = article['pubDate'] ?? '';
+          final dateStr = article['publishedAt'] ?? '';
           if (dateStr.isEmpty) return false;
 
           final pubDate = DateTime.tryParse(dateStr);
@@ -246,18 +246,16 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
           return pubDate.year >= 2024 && pubDate.year <= 2025;
         }).toList();
 
-        print('Filtered articles: $filteredArticles'); // Debugging line
-
         setState(() {
-          articles = filteredArticles.isNotEmpty
-              ? filteredArticles
-              : rawArticles; // Update to filteredArticles
+          articles =
+              filteredArticles.isNotEmpty ? filteredArticles : rawArticles;
           isLoading = false;
         });
       } else {
         throw Exception('Failed to load news');
       }
     } catch (e) {
+      print("Error: $e");
       setState(() {
         hasError = true;
         isLoading = false;
@@ -304,16 +302,17 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
                             final article = articles[index];
 
                             // Ensure you pass the article URL (if available in the API response)
-                            final articleUrl = article['link'] ??
-                                ''; // Assuming 'link' contains the article URL
+                            final articleUrl = article['url'] ?? '';
+
+                            ''; // Assuming 'link' contains the article URL
 
                             return GoalCard(
                               title: article['title'] ?? 'No title',
                               description:
                                   article['description'] ?? 'No description',
-                              imagePath: article['image_url'] != null &&
-                                      article['image_url'].isNotEmpty
-                                  ? article['image_url']
+                              imagePath: article['image'] != null &&
+                                      article['image'].isNotEmpty
+                                  ? article['image']
                                   : 'https://via.placeholder.com/300x160.png?text=No+Image',
                               articleUrl:
                                   articleUrl, // Pass the article URL here
@@ -852,9 +851,7 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                         bottom: 10,
                         left: 10,
                         child: ElevatedButton(
-                          onPressed: () {
-
-                          },
+                          onPressed: () {},
                           child: Text(
                             "Read More",
                             style: TextStyle(color: Colors.white),
