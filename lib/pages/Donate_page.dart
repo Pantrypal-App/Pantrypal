@@ -3,9 +3,12 @@ import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'Notification_page.dart';
 import 'Home_page.dart';
+import 'readmore_page.dart';
 import 'profile_page.dart';
 import 'request_page.dart';
 import 'process_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class DonationPage extends StatefulWidget {
   @override
@@ -15,6 +18,9 @@ class DonationPage extends StatefulWidget {
 class _DonationPageState extends State<DonationPage> {
   int selectedIndex = 1;
 
+  List<dynamic> ongoingNews = [];
+  List<dynamic> loveNews = [];
+
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
     TabItem(icon: Icons.volunteer_activism, title: 'Donate'),
@@ -22,6 +28,39 @@ class _DonationPageState extends State<DonationPage> {
     TabItem(icon: Icons.notifications, title: 'Notification'),
     TabItem(icon: Icons.person, title: 'You'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNews();
+  }
+
+  // Fetch news from the GNews API
+  Future<void> fetchNews() async {
+    final String apiKey = 'a4b2de65ff5e632d3361fc3404f2f6a4';
+    final ongoingUrl =
+        'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
+    final loveUrl = 'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
+
+    try {
+      final ongoingResponse = await http.get(Uri.parse(ongoingUrl));
+      final loveResponse = await http.get(Uri.parse(loveUrl));
+
+      if (ongoingResponse.statusCode == 200 && loveResponse.statusCode == 200) {
+        final ongoingData = json.decode(ongoingResponse.body);
+        final loveData = json.decode(loveResponse.body);
+
+        setState(() {
+          ongoingNews = ongoingData['articles'];
+          loveNews = loveData['articles'];
+        });
+      } else {
+        throw Exception('Failed to load news');
+      }
+    } catch (e) {
+      print("Error fetching news: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,20 +119,7 @@ class _DonationPageState extends State<DonationPage> {
                   style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ),
-              _buildHorizontalScroll([
-                GoalCard(
-                  title: "Feed Families in Typhoon-Affected Areas",
-                  description:
-                      "Support families recovering from recent typhoons. Your help can bring hope and nourishment.",
-                  imagePath: 'lib/images/typhon.jpg',
-                ),
-                GoalCard(
-                  title: "Help uplift urban poor communities",
-                  description:
-                      "Your support can provide hope and resources to families struggling in urban poverty. Lend a hand today to make a positive impact.",
-                  imagePath: 'lib/images/urban 1.png',
-                ),
-              ]),
+              _buildHorizontalScroll(ongoingNews),
 
               _buildSectionTitle('NEED SOME LOVE'),
               Padding(
@@ -103,26 +129,7 @@ class _DonationPageState extends State<DonationPage> {
                   style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ),
-              _buildHorizontalScroll([
-                GoalCard(
-                  title: "Empower Indigenous Communities with Food Assistance",
-                  description:
-                      "Support indigenous communities in the Philippines by donating life-saving meals.",
-                  imagePath: 'lib/images/indigenius.webp',
-                ),
-                GoalCard(
-                  title: "Create lifelong opportunities for children.",
-                  description:
-                      "Every child deserves to dream. Support orphanages to give love and care to those without family.",
-                  imagePath: 'lib/images/orphan 1.png',
-                ),
-                GoalCard(
-                  title: "Be a voice for the voiceless",
-                  description:
-                      "Animals need help too! Feel free to provide foods in animal shelters. Your generosity make all the difference.",
-                  imagePath: 'lib/images/dogs 1.png',
-                ),
-              ]),
+              _buildHorizontalScroll(loveNews),
 
               _buildSectionTitle('NOT SURE WHERE TO HELP?'),
               Padding(
@@ -153,7 +160,6 @@ class _DonationPageState extends State<DonationPage> {
               MaterialPageRoute(builder: (context) => HomePage()),
             );
           } else if (index == 2) {
-            // Navigate to Notification Page
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => RequestPage()),
@@ -256,12 +262,19 @@ class _DonationPageState extends State<DonationPage> {
     );
   }
 
-  Widget _buildHorizontalScroll(List<Widget> cards) {
+  Widget _buildHorizontalScroll(List<dynamic> articles) {
     return SizedBox(
       height: 350,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: cards,
+        children: articles.map((article) {
+          return GoalCard(
+            title: article['title'],
+            description: article['description'],
+            imagePath: article['image'] ?? 'lib/images/default.jpg', // Use a default image if none is provided
+            articleUrl: article['url'], // Add the article URL here
+          );
+        }).toList(),
       ),
     );
   }
@@ -271,18 +284,20 @@ class GoalCard extends StatelessWidget {
   final String title;
   final String description;
   final String imagePath;
+  final String articleUrl;  // Add articleUrl here
 
   GoalCard({
     required this.title,
     required this.description,
     required this.imagePath,
+    required this.articleUrl,  // Add articleUrl to the constructor
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 300,
-      height: 350, // Kept your original height
+      height: 350,
       margin: EdgeInsets.all(10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
@@ -293,14 +308,14 @@ class GoalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 160, // Kept your image height
+            height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(10),
                 topRight: Radius.circular(10),
               ),
               image: DecorationImage(
-                image: AssetImage(imagePath),
+                image: NetworkImage(imagePath),
                 fit: BoxFit.cover,
                 onError: (error, stackTrace) => const Icon(
                   Icons.broken_image,
@@ -322,7 +337,7 @@ class GoalCard extends StatelessWidget {
                     child: Text(
                       description,
                       style: TextStyle(fontSize: 14, color: Colors.black54),
-                      maxLines: 3, // Prevents overflow
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -331,7 +346,15 @@ class GoalCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
-                        onPressed: () {}, // Navigate to more details
+                        onPressed: () {
+                          Navigator.push(
+                            context,  
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ReadMorePage(articleUrl: articleUrl),  // Pass the articleUrl
+                            ),
+                          );
+                        }, // Navigate to more details
                         child: Text("Read More",
                             style: TextStyle(color: Colors.blue)),
                       ),
@@ -342,10 +365,9 @@ class GoalCard extends StatelessWidget {
                             MaterialPageRoute(
                                 builder: (context) => ProcessPage()),
                           );
-                        }, // Navigate to donation
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(93, 0, 255, 68),
+                          backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                           foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
