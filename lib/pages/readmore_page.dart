@@ -1,54 +1,87 @@
+import 'process_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:html/parser.dart' as html;
 
 class ReadMorePage extends StatefulWidget {
-  final String articleUrl; // The URL of the article to fetch
-  
-  // Constructor to pass the URL of the article
+  final String articleUrl;
+
   ReadMorePage({required this.articleUrl});
-  
+
   @override
   _ReadMorePageState createState() => _ReadMorePageState();
 }
 
 class _ReadMorePageState extends State<ReadMorePage> {
-  late bool isLoading;
-  late bool hasError;
-  late Map<String, dynamic> article;
+  String articleContent = '';
+  String articleImage = '';
+  String articleTitle = '';
+  String articleDescription = '';
+  bool isLoading = true;
+  bool hasError = false;
+
+  final List<String> blacklistKeywords = [
+  'no comments yet',
+  'how does this make you feel',
+  'follow us',
+  'subscribe',
+  'advertisement',
+  'ad:',
+  'share this story',
+  'sponsored content',
+  'join our newsletter',
+  'please abide by rappler',
+  'checking your rappler+',
+  'upgrade to rappler+',
+  'all right reserved',
+];
+
 
   @override
   void initState() {
     super.initState();
-    isLoading = true;
-    hasError = false;
-    article = {};
-    fetchArticleDetails();
+    fetchArticle();
   }
 
-  // Function to fetch article details using the provided URL
-  Future<void> fetchArticleDetails() async {
+  Future<void> fetchArticle() async {
     try {
       final response = await http.get(Uri.parse(widget.articleUrl));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        var document = html.parse(response.body);
+
+        String title = document.querySelector('title')?.text ?? 'No title available';
+        String image = document.querySelector('img')?.attributes['src'] ?? '';
+        String description = document
+                .querySelector('meta[name="description"]')
+                ?.attributes['content'] ??
+            'No description available';
+
+        if (image.isEmpty || image.startsWith('data:image')) {
+          image = 'https://media.licdn.com/dms/image/v2/D5612AQEvNyNDzsTosA/article-cover_image-shrink_720_1280/B56ZYLonVPH0AI-/0/1743951919345?e=2147483647&v=beta&t=bFYrq44qSgoyOHr4H_xXw31N_JkVNrL5Emd7zjUNEOk';
+        }
+
+        String content = '';
+        var paragraphs = document.querySelectorAll('p');
+
+        for (var p in paragraphs) {
+          String text = p.text.trim();
+          // Filter out unwanted content
+          bool isClean = !blacklistKeywords.any((phrase) => text.toLowerCase().contains(phrase));
+          if (isClean && text.isNotEmpty) {
+            content += text + "\n\n";
+          }
+        }
 
         setState(() {
-          article = {
-            'title': data['title'] ?? 'No title',
-            'description': data['description'] ?? 'No description available.',
-            'content': data['content'] ?? 'No content available.',
-            'image_url': data['image_url'] ?? 'https://via.placeholder.com/150',
-          };
+          articleTitle = title;
+          articleImage = image;
+          articleDescription = description;
+          articleContent = content;
           isLoading = false;
         });
       } else {
-        setState(() {
-          hasError = true;
-          isLoading = false;
-        });
-        print("Error: Failed to load article with status code ${response.statusCode}");
+        throw Exception('Failed to load article');
       }
     } catch (e) {
       setState(() {
@@ -69,105 +102,68 @@ class _ReadMorePageState extends State<ReadMorePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(12),
+        color: Colors.white,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(93, 0, 255, 68),
+            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProcessPage()),
+            );
+          },
+          child: Text(
+            'Donate Now',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : hasError
               ? Center(
                   child: Text(
-                    'Failed to load article.',
+                    "Failed to load article.",
                     style: TextStyle(color: Colors.red),
                   ),
                 )
               : SingleChildScrollView(
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Display article image
-                      Stack(
-                        children: [
-                          Image.network(
-                            article['image_url'],
-                            width: double.infinity,
-                            height: 200,
-                            fit: BoxFit.cover,
-                          ),
-                          Positioned(
-                            bottom: 10,
-                            left: 10,
-                            child: Text(
-                              article['title'],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Article overview section
-                            Text(
-                              'OVERVIEW',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              article['description'],
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              article['content'],
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            SizedBox(height: 16),
-                            // Additional content or updates section
-                            Text(
-                              'IMAGE GALLERY',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Image.network(
-                              article['image_url'],
+                      articleImage.isNotEmpty
+                          ? Image.network(
+                              articleImage,
                               width: double.infinity,
-                              height: 200,
+                              height: 250,
                               fit: BoxFit.cover,
-                            ),
-                            SizedBox(height: 16),
-                            // Call to action: Donate Now
-                            Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(93, 0, 255, 68),
-                                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                                ),
-                                onPressed: () {
-                                  
-                                },
-                                child: Text(
-                                  'Donate Now',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                            )
+                          : Container(height: 250, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        articleTitle,
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
+                      SizedBox(height: 10),
+                      Text(
+                        articleDescription,
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        articleContent,
+                        style: TextStyle(fontSize: 16, height: 1.5),
+                      ),
+                      SizedBox(height: 100), // To leave space above the bottom button
                     ],
                   ),
                 ),

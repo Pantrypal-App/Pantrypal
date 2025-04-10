@@ -387,7 +387,6 @@ class GoalCard extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: () {
-                          // Pass the article URL to the ReadMorePage
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -396,7 +395,7 @@ class GoalCard extends StatelessWidget {
                             ),
                           );
                         },
-                        child: Text("Read More",
+                        child: Text('Read More',
                             style: TextStyle(color: Colors.blue)),
                       ),
                       ElevatedButton(
