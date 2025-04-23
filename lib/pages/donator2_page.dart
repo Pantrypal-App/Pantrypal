@@ -2,7 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:image/image.dart' as img;
 
 class Donator2Page extends StatefulWidget {
   @override
@@ -31,17 +36,83 @@ class _Donator2PageState extends State<Donator2Page> {
     }
   }
 
+  File? _pickedImage;
+
+// Function to pick image
+  Future<void> pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+
+      // Compress the image
+      final bytes = await imageFile.readAsBytes();
+      img.Image? image = img.decodeImage(bytes);
+
+      if (image != null) {
+        final compressedBytes =
+            img.encodeJpg(image, quality: 60); // reduce quality
+        final tempDir = Directory.systemTemp;
+        final targetPath =
+            '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final compressedFile =
+            await File(targetPath).writeAsBytes(compressedBytes);
+        setState(() {
+          _pickedImage = compressedFile;
+        });
+      } else {
+        setState(() {
+          _pickedImage = imageFile; // fallback to original
+        });
+      }
+    }
+  }
+
+// Function to upload image to Firebase Storage
+  Future<String?> uploadImageToFirebase() async {
+    if (_pickedImage == null) return null;
+
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref().child('receipts/$fileName');
+
+    await ref.putFile(_pickedImage!);
+    String downloadUrl = await ref.getDownloadURL();
+    return downloadUrl;
+  }
+
+// Function to upload image to ImgBB
+  Future<String?> uploadImageToImgBB(File imageFile) async {
+    final apiKey = 'b1964c76eec82b6bc38b376b91e42c1a';
+    final base64Image = base64Encode(await imageFile.readAsBytes());
+
+    final response = await http.post(
+      Uri.parse('https://api.imgbb.com/1/upload'),
+      body: {
+        'key': apiKey,
+        'image': base64Image,
+      },
+      ).timeout(Duration(seconds: 30)
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      return jsonResponse['data']['url'];
+    } else {
+      throw Exception('Failed to upload');
+    }
+  }
+
   Future<void> saveDonation() async {
     // Trim spaces from input fields
     String name = nameController.text.trim();
     String eWalletNumber = numberController.text.trim();
     String amount = amountController.text.trim();
 
-    // Validate that name, e-wallet number, and amount are filled
     if (name.isEmpty || eWalletNumber.isEmpty || amount.isEmpty) {
-      // Show a message to the user if any required field is empty
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please fill in all required fields')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text('Please fill in all required fields and upload a receipt')));
       return; // Exit the function if validation fails
     }
 
@@ -53,6 +124,13 @@ class _Donator2PageState extends State<Donator2Page> {
     }
 
     try {
+      showLoadingDialog(context);
+      String? receiptUrl = await uploadImageToImgBB(_pickedImage!);
+
+      if (receiptUrl == null) {
+        throw Exception('Failed to upload receipt image');
+      }
+
       double latitude = 14.1084;
       double longitude = 121.1416;
 
@@ -64,20 +142,66 @@ class _Donator2PageState extends State<Donator2Page> {
         'additional_info': additionalInfoController.text,
         'latitude': latitude,
         'longitude': longitude,
+        'receipt_url': receiptUrl,
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      Navigator.of(context).pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Donation saved successfully!')));
 
       // Optionally navigate to another page
       Navigator.popUntil(context, (route) => route.isFirst);
-
     } catch (e) {
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error saving donation: $e')));
     }
   }
+
+  Future<void> showLoadingDialog(BuildContext context) async {
+  return showDialog(
+    barrierDismissible: false, // prevent closing it accidentally
+    context: context,
+    builder: (context) {
+      return Center(
+        child: Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: Colors.green, 
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Uploading...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +240,19 @@ class _Donator2PageState extends State<Donator2Page> {
                 });
               },
             ),
+            Text('Upload your e-wallet receipt:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: pickImage,
+              icon: Icon(Icons.upload_file),
+              label: Text('Upload Receipt'),
+            ),
+            SizedBox(height: 10),
+            _pickedImage != null
+                ? Image.file(_pickedImage!, height: 150)
+                : Text('No receipt uploaded yet.'),
+            SizedBox(height: 20),
             SizedBox(height: 20),
             Text('The location for your donation:',
                 style: TextStyle(fontWeight: FontWeight.bold)),

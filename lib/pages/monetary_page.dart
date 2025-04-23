@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'payment_page.dart';
+import 'donator2_page.dart';
+
 
 class MonetaryDonationPage extends StatefulWidget {
   @override
@@ -187,7 +188,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PaymentPage()),
+                MaterialPageRoute(builder: (context) => Donator2Page()),
               );
             },
             style: ElevatedButton.styleFrom(
