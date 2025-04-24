@@ -7,6 +7,122 @@ class GamificationPage extends StatefulWidget {
   _GamificationPageState createState() => _GamificationPageState();
 }
 
+class ReaderPage extends StatefulWidget {
+  final int rewardPoints;
+  final String taskKey;
+
+  const ReaderPage(
+      {required this.rewardPoints, required this.taskKey, Key? key})
+      : super(key: key);
+
+  @override
+  State<ReaderPage> createState() => _ReaderPageState();
+}
+
+class _ReaderPageState extends State<ReaderPage> {
+  late DateTime startTime;
+  late Duration totalTimeSpent;
+  bool rewardGiven = false;
+
+  @override
+  void initState() {
+    super.initState();
+    totalTimeSpent = Duration.zero;
+    _resumeTimer();
+  }
+
+  void _resumeTimer() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? previousTimeMillis = prefs.getInt('${widget.taskKey}_time');
+    String? previousStartTimeString = prefs.getString('${widget.taskKey}_start_time');
+
+    if (previousStartTimeString != null) {
+      startTime = DateTime.parse(previousStartTimeString);
+    } else {
+      startTime = DateTime.now();
+    }
+
+    if (previousTimeMillis != null) {
+      totalTimeSpent += Duration(milliseconds: previousTimeMillis);
+    }
+
+    _startMonitoring();
+  }
+
+  void _startMonitoring() {
+    Future.delayed(Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {});
+        _checkIfEligible();
+      }
+    });
+  }
+
+  void _checkIfEligible() async {
+    Duration currentSession = DateTime.now().difference(startTime);
+    Duration total = totalTimeSpent + currentSession;
+
+    if (total.inMinutes >= 5 && !rewardGiven) {
+      rewardGiven = true;
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int currentCoins = prefs.getInt('coinBalance') ?? 0;
+      prefs.setInt('coinBalance', currentCoins + widget.rewardPoints);
+      prefs.setBool('${widget.taskKey}_completed', true);
+      prefs.remove('${widget.taskKey}_time');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('+${widget.rewardPoints} coins earned!')),
+      );
+    } else {
+      // Save ongoing session time
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setInt('${widget.taskKey}_time', total.inMilliseconds);
+    }
+
+    if (!rewardGiven) {
+      _startMonitoring(); // keep monitoring
+    }
+  }
+
+  @override
+  void dispose() {
+    Duration session = DateTime.now().difference(startTime);
+    totalTimeSpent += session;
+    _saveProgress();
+    super.dispose();
+  }
+
+  Future<void> _saveProgress() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setInt('${widget.taskKey}_time', totalTimeSpent.inMilliseconds);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Reading Article")),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: ListView(
+          children: [
+            Text(
+              "This is the article content...",
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "Keep reading for 5 minutes to earn your reward!",
+              style:
+                  TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GamificationPageState extends State<GamificationPage> {
   final List<String> rewardDays = [
     "Day 1",
@@ -19,11 +135,21 @@ class _GamificationPageState extends State<GamificationPage> {
   ];
 
   List<String> claimedDays = [];
+  int coinBalance = 0;
 
   @override
   void initState() {
     super.initState();
     _loadClaimedDays();
+    _loadCoinBalance();
+  }
+
+  Future<void> _startReadingSession(String taskKey, int rewardPoints) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    DateTime now = DateTime.now();
+
+    prefs.setString('${taskKey}_start', now.toIso8601String());
+    prefs.setInt('${taskKey}_reward', rewardPoints);
   }
 
   Future<void> _loadClaimedDays() async {
@@ -32,6 +158,18 @@ class _GamificationPageState extends State<GamificationPage> {
     setState(() {
       claimedDays = savedClaimedDays;
     });
+  }
+
+  Future<void> _loadCoinBalance() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      coinBalance = prefs.getInt('coinBalance') ?? 0;
+    });
+  }
+
+  Future<void> _saveCoinBalance() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setInt('coinBalance', coinBalance);
   }
 
   Future<void> _saveClaimedDays() async {
@@ -57,15 +195,16 @@ class _GamificationPageState extends State<GamificationPage> {
     if (claimedDays.length < 7) {
       setState(() {
         claimedDays.add(today);
+        coinBalance += 10;
       });
 
-      // Save the updated claimed days
       await _saveClaimedDays();
+      await _saveCoinBalance();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'Successfully claimed reward for ${rewardDays[claimedDays.length - 1]}!'),
+              'Successfully claimed reward for ${rewardDays[claimedDays.length - 1]}! +10 Coins'),
         ),
       );
     }
@@ -113,7 +252,7 @@ class _GamificationPageState extends State<GamificationPage> {
                     Icon(Icons.monetization_on, color: Colors.white, size: 18),
                     SizedBox(width: 5),
                     Text(
-                      "Your Coins 150",
+                      "Your Coins $coinBalance",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -263,7 +402,7 @@ class _GamificationPageState extends State<GamificationPage> {
                       "Read any article within 5 minutes!",
                       50,
                       "lib/images/read 1.png",
-                      true),
+                      false),
                   _buildTaskCard(
                       "Great Sympathy",
                       "Read about typhoon-affected families.",
@@ -336,7 +475,27 @@ class _GamificationPageState extends State<GamificationPage> {
           ],
         ),
         trailing: ElevatedButton(
-          onPressed: () {},
+          onPressed: () async {
+            if (title == "Great Reader") {
+              // 1. Start the reading session
+              await _startReadingSession("great_reader", points);
+
+              // 2. Navigate to your homepage (replace with your actual route if needed)
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ReaderPage(
+                    rewardPoints: points,
+                    taskKey: "great_reader",
+                  ),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('This task is not yet implemented.')),
+              );
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: isClaimable
                 ? const Color.fromARGB(93, 0, 255, 68)
