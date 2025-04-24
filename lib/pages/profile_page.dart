@@ -15,7 +15,7 @@ import 'home_page.dart';
 import 'request_page.dart';
 import 'Donate_page.dart';
 import 'notification_page.dart';
-import 'ranking_page.dart'; 
+import 'ranking_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
@@ -57,7 +57,8 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     if (_user != null) {
-      DocumentSnapshot userDoc = await _firestore.collection("users").doc(_user!.uid).get();
+      DocumentSnapshot userDoc =
+          await _firestore.collection("users").doc(_user!.uid).get();
       if (userDoc.exists) {
         String? profilePic = userDoc["profilePic"];
         if (profilePic != null) {
@@ -86,9 +87,11 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse("https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
+        Uri.parse(
+            "https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
       );
-      request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
+      request.files
+          .add(await http.MultipartFile.fromPath('image', _image!.path));
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
       var json = jsonDecode(responseData);
@@ -127,14 +130,54 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _updateUsername() async {
     if (_user != null && _nameController.text.isNotEmpty) {
       try {
-        await _user!.updateDisplayName(_nameController.text);
-        await _firestore.collection("users").doc(_user!.uid).set({
-          "username": _nameController.text,
+        String newUsername = _nameController.text.trim();
+        String uid = _user!.uid;
+
+      QuerySnapshot existingUser = await _firestore
+          .collection("users")
+          .where("username", isEqualTo: newUsername)
+          .get();
+
+      if (existingUser.docs.isNotEmpty && existingUser.docs.first.id != uid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Username already taken")),
+        );
+        return;
+      }
+
+        // Save new username to users collection
+        await _user!.updateDisplayName(newUsername);
+        await _firestore.collection("users").doc(uid).set({
+          "username": newUsername,
           "email": _user!.email,
+          "profilePic": _user!.photoURL
         }, SetOptions(merge: true));
+
+        // Update any matching donations to this user's UID
+        QuerySnapshot donationSnapshot = await _firestore
+            .collection("donations")
+            .where("username", isEqualTo: newUsername)
+            .get();
+
+        for (var doc in donationSnapshot.docs) {
+          await doc.reference.update({
+            "userID": uid,
+            // Optional: also update the username for consistency
+            "username": newUsername
+          });
+        }
+
         _getCurrentUser();
+
+        // ✅ Success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Username updated successfully")),
+        );
       } catch (e) {
         print("Error updating username: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to update username: $e")),
+        );
       }
     }
   }
@@ -166,10 +209,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
                         radius: 48,
-                        backgroundImage: _user?.photoURL != null ? NetworkImage(_user!.photoURL!) : null,
+                        backgroundImage: _user?.photoURL != null
+                            ? NetworkImage(_user!.photoURL!)
+                            : null,
                         backgroundColor: Colors.grey[300],
                         child: _user?.photoURL == null
-                            ? Icon(Icons.camera_alt, color: Colors.grey[700], size: 30)
+                            ? Icon(Icons.camera_alt,
+                                color: Colors.grey[700], size: 30)
                             : null,
                       ),
                     ),
@@ -182,7 +228,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     controller: _nameController,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: "Enter your username",
@@ -206,11 +254,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 20),
                   _buildCard(
                     ListTile(
-                      title: const Text("Account Details", style: TextStyle(fontWeight: FontWeight.bold)),
+                      title: const Text("Account Details",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => AccountDetailsPage()),
+                        MaterialPageRoute(
+                            builder: (context) => AccountDetailsPage()),
                       ),
                     ),
                   ),
@@ -220,19 +270,22 @@ class _ProfilePageState extends State<ProfilePage> {
                         _buildOption(Icons.leaderboard, "Ranking", () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => TopDonorsPage()),
+                            MaterialPageRoute(
+                                builder: (context) => TopDonorsPage()),
                           );
                         }),
                         _buildOption(Icons.notifications, "Notification", () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => NotificationPage()),
+                            MaterialPageRoute(
+                                builder: (context) => NotificationPage()),
                           );
                         }),
                         _buildOption(Icons.list, "List", () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => DonationListPage()),
+                            MaterialPageRoute(
+                                builder: (context) => DonationListPage()),
                           );
                         }),
                       ],
@@ -244,7 +297,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         _buildOption(Icons.message, "Message us", () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => FeedbackPage()),
+                            MaterialPageRoute(
+                                builder: (context) => FeedbackPage()),
                           );
                         }),
                         _buildOption(Icons.share, "Share"),
@@ -255,7 +309,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildCard(
                     ListTile(
                       title: const Text("Log Out",
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.red, fontWeight: FontWeight.bold)),
                       leading: const Icon(Icons.logout, color: Colors.red),
                       onTap: () async {
                         await _auth.signOut();
@@ -276,7 +331,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.black,
+        backgroundColor:
+            Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
+                Colors.black,
         color: Colors.black,
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
@@ -293,7 +350,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 context, MaterialPageRoute(builder: (context) => pages[index]));
           }
         },
-        chipStyle: const ChipStyle(convexBridge: true, background: Colors.white),
+        chipStyle:
+            const ChipStyle(convexBridge: true, background: Colors.white),
         itemStyle: ItemStyle.circle,
         titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
         animated: true,

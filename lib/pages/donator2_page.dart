@@ -92,8 +92,7 @@ class _Donator2PageState extends State<Donator2Page> {
         'key': apiKey,
         'image': base64Image,
       },
-      ).timeout(Duration(seconds: 30)
-    );
+    ).timeout(Duration(seconds: 30));
 
     if (response.statusCode == 200) {
       final jsonResponse = json.decode(response.body);
@@ -134,24 +133,63 @@ class _Donator2PageState extends State<Donator2Page> {
       double latitude = 14.1084;
       double longitude = 121.1416;
 
-      await FirebaseFirestore.instance.collection('monetary_donations').add({
+      final existingUserSnapshot = await FirebaseFirestore.instance
+          .collection('donators')
+          .where('name', isEqualTo: name)
+          .where('e_wallet_number', isEqualTo: eWalletNumber)
+          .limit(1)
+          .get();
+
+      String userId;
+
+      if (existingUserSnapshot.docs.isNotEmpty) {
+        // User exists, reuse their ID
+        userId = existingUserSnapshot.docs.first.id;
+      } else {
+        // New user, create and get ID
+        final newUserRef =
+            await FirebaseFirestore.instance.collection('donators').add({
+          'name': name,
+          'e_wallet_number': eWalletNumber,
+          'created_at': FieldValue.serverTimestamp(),
+        });
+        userId = newUserRef.id;
+      }
+
+      final parentDocRef = FirebaseFirestore.instance
+          .collection('monetary_donations')
+          .doc(userId);
+
+      // ✅ Create parent doc first to avoid subcollection warning
+      await parentDocRef.set({
+        'name': name,
+        'e_wallet_number': eWalletNumber,
+        'exists': true,
+        'created_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final donationsRef = parentDocRef.collection('donations');
+
+      final donationData = {
+        'userId': userId,
         'name': name,
         'payment_method': selectedPayment,
         'e_wallet_number': eWalletNumber,
-        'amount': amount,
+        'amount': double.parse(amount),
         'additional_info': additionalInfoController.text,
         'latitude': latitude,
         'longitude': longitude,
         'receipt_url': receiptUrl,
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+
+      await donationsRef.add(donationData);
 
       Navigator.of(context).pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Donation saved successfully!')));
 
-      // Optionally navigate to another page
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       Navigator.of(context).pop();
@@ -161,47 +199,46 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Future<void> showLoadingDialog(BuildContext context) async {
-  return showDialog(
-    barrierDismissible: false, // prevent closing it accidentally
-    context: context,
-    builder: (context) {
-      return Center(
-        child: Container(
-          padding: EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                color: Colors.green, 
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Hang Tight...',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+    return showDialog(
+      barrierDismissible: false, // prevent closing it accidentally
+      context: context,
+      builder: (context) {
+        return Center(
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  color: Colors.green,
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Hang Tight...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
-
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
