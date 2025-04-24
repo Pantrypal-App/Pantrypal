@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
 import 'AccountDetailsPage.dart';
@@ -15,6 +15,7 @@ import 'home_page.dart';
 import 'request_page.dart';
 import 'Donate_page.dart';
 import 'notification_page.dart';
+import 'ranking_page.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
@@ -33,6 +34,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
     TabItem(icon: Icons.volunteer_activism, title: 'Donate'),
@@ -48,24 +51,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _getCurrentUser() async {
-  setState(() {
-    _user = _auth.currentUser;
-    _nameController.text = _user?.displayName ?? "";
-  });
+    setState(() {
+      _user = _auth.currentUser;
+      _nameController.text = _user?.displayName ?? "";
+    });
 
-  if (_user != null) {
-    DocumentSnapshot userDoc = await _firestore.collection("users").doc(_user!.uid).get();
-    if (userDoc.exists) {
-      String? profilePic = userDoc["profilePic"];
-      if (profilePic != null) {
-        setState(() {
-        _user = _auth.currentUser;
-          _user!.updatePhotoURL(profilePic);
-        });
+    if (_user != null) {
+      DocumentSnapshot userDoc = await _firestore.collection("users").doc(_user!.uid).get();
+      if (userDoc.exists) {
+        String? profilePic = userDoc["profilePic"];
+        if (profilePic != null) {
+          setState(() {
+            _user!.updatePhotoURL(profilePic);
+          });
+        }
       }
     }
   }
-}
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -77,7 +79,8 @@ class _ProfilePageState extends State<ProfilePage> {
       _uploadImageToImgBB();
     }
   }
-   Future<void> _uploadImageToImgBB() async {
+
+  Future<void> _uploadImageToImgBB() async {
     if (_image == null || _user == null) return;
 
     try {
@@ -85,7 +88,6 @@ class _ProfilePageState extends State<ProfilePage> {
         'POST',
         Uri.parse("https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
       );
-
       request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
@@ -93,62 +95,44 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (json["success"]) {
         String imageUrl = json["data"]["url"];
-
-        // Update profile picture in Firebase Auth
         await _user!.updatePhotoURL(imageUrl);
-
-        // Save profile picture in Firestore
         await _firestore.collection("users").doc(_user!.uid).set({
           "profilePic": imageUrl,
         }, SetOptions(merge: true));
-
-        _getCurrentUser(); // Refresh UI
-      } else {
-        print("ImgBB Upload Error: ${json['error']['message']}");
+        _getCurrentUser();
       }
     } catch (e) {
       print("Error uploading image: $e");
     }
   }
 
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance; 
-
   Future<void> _uploadImage() async {
-  if (_image == null || _user == null) return;
+    if (_image == null || _user == null) return;
 
-  try {
-    Reference ref = _storage.ref().child("profile_pics/${_user!.uid}.jpg");
-    await ref.putFile(_image!);
-    String imageUrl = await ref.getDownloadURL();
+    try {
+      Reference ref = _storage.ref().child("profile_pics/${_user!.uid}.jpg");
+      await ref.putFile(_image!);
+      String imageUrl = await ref.getDownloadURL();
 
-    // Update profile picture in Firebase Authentication
-    await _user!.updatePhotoURL(imageUrl);
-
-    // Save profile picture in Firestore
-    await _firestore.collection("users").doc(_user!.uid).set({
-      "profilePic": imageUrl,
-    }, SetOptions(merge: true));
-
-    _getCurrentUser(); // Refresh UI
-  } catch (e) {
-    print("Error uploading image: $e");
+      await _user!.updatePhotoURL(imageUrl);
+      await _firestore.collection("users").doc(_user!.uid).set({
+        "profilePic": imageUrl,
+      }, SetOptions(merge: true));
+      _getCurrentUser();
+    } catch (e) {
+      print("Error uploading image: $e");
+    }
   }
-}
 
   Future<void> _updateUsername() async {
     if (_user != null && _nameController.text.isNotEmpty) {
       try {
-        // Update username in Firebase Authentication
         await _user!.updateDisplayName(_nameController.text);
-
-        // Save username in Firestore
         await _firestore.collection("users").doc(_user!.uid).set({
           "username": _nameController.text,
-          "email": _user!.email, // Store email too for reference
-        }, SetOptions(merge: true)); // Merge to avoid overwriting other data
-
-        _getCurrentUser(); // Refresh UI
+          "email": _user!.email,
+        }, SetOptions(merge: true));
+        _getCurrentUser();
       } catch (e) {
         print("Error updating username: $e");
       }
@@ -182,18 +166,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
                         radius: 48,
-                        backgroundImage: _user?.photoURL != null
-                            ? NetworkImage(_user!.photoURL!)
-                            : null,
-                        backgroundColor: themeProvider.isNightMode
-                            ? Colors.grey[700]
-                            : Colors.grey[300],
+                        backgroundImage: _user?.photoURL != null ? NetworkImage(_user!.photoURL!) : null,
+                        backgroundColor: Colors.grey[300],
                         child: _user?.photoURL == null
-                            ? Icon(Icons.camera_alt,
-                                color: themeProvider.isNightMode
-                                    ? Colors.white70
-                                    : Colors.grey[700],
-                                size: 30)
+                            ? Icon(Icons.camera_alt, color: Colors.grey[700], size: 30)
                             : null,
                       ),
                     ),
@@ -206,9 +182,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     controller: _nameController,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                        fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       hintText: "Enter your username",
@@ -231,51 +205,47 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   const SizedBox(height: 20),
                   _buildCard(
-                    themeProvider,
                     ListTile(
-                      title: const Text("Account Details",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      title: const Text("Account Details", style: TextStyle(fontWeight: FontWeight.bold)),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                       onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => AccountDetailsPage())),
+                        context,
+                        MaterialPageRoute(builder: (context) => AccountDetailsPage()),
+                      ),
                     ),
                   ),
                   _buildCard(
-                    themeProvider,
                     Column(
                       children: [
-                        _buildToggleOption(
-                          Icons.dark_mode,
-                          "Night Mode",
-                          themeProvider.isNightMode,
-                          (value) => themeProvider.toggleNightMode(),
-                        ),
+                        _buildOption(Icons.leaderboard, "Ranking", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => TopDonorsPage()),
+                          );
+                        }),
                         _buildOption(Icons.notifications, "Notification", () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => NotificationPage()));
+                            context,
+                            MaterialPageRoute(builder: (context) => NotificationPage()),
+                          );
                         }),
                         _buildOption(Icons.list, "List", () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => DonationListPage()));
+                            context,
+                            MaterialPageRoute(builder: (context) => DonationListPage()),
+                          );
                         }),
                       ],
                     ),
                   ),
                   _buildCard(
-                    themeProvider,
                     Column(
                       children: [
                         _buildOption(Icons.message, "Message us", () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => FeedbackPage()));
+                            context,
+                            MaterialPageRoute(builder: (context) => FeedbackPage()),
+                          );
                         }),
                         _buildOption(Icons.share, "Share"),
                         _buildOption(Icons.group, "About us"),
@@ -283,11 +253,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   _buildCard(
-                    themeProvider,
                     ListTile(
                       title: const Text("Log Out",
-                          style: TextStyle(
-                              color: Colors.red, fontWeight: FontWeight.bold)),
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                       leading: const Icon(Icons.logout, color: Colors.red),
                       onTap: () async {
                         await _auth.signOut();
@@ -308,10 +276,8 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       bottomNavigationBar: BottomBarInspiredInside(
         items: items,
-        backgroundColor:
-            Theme.of(context).bottomNavigationBarTheme.backgroundColor ??
-                Colors.black,
-        color: themeProvider.isNightMode ? Colors.white : Colors.black,
+        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.black,
+        color: Colors.black,
         colorSelected: Colors.black,
         indexSelected: selectedIndex,
         onTap: (int index) {
@@ -327,10 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 context, MaterialPageRoute(builder: (context) => pages[index]));
           }
         },
-        chipStyle: const ChipStyle(
-          convexBridge: true,
-          background: Colors.white,
-        ),
+        chipStyle: const ChipStyle(convexBridge: true, background: Colors.white),
         itemStyle: ItemStyle.circle,
         titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
         animated: true,
@@ -347,17 +310,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildToggleOption(
-      IconData icon, String title, bool value, Function(bool) onChanged) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing:
-          Switch(value: value, onChanged: onChanged, activeColor: Colors.green),
-    );
-  }
-
-  Widget _buildCard(ThemeProvider themeProvider, Widget child) {
+  Widget _buildCard(Widget child) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Card(
