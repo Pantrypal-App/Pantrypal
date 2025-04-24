@@ -175,7 +175,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade300,
       appBar: AppBar(
-        backgroundColor: Colors.green.shade300,
+        backgroundColor: Colors.green,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
