@@ -187,7 +187,7 @@ class _Donator2PageState extends State<Donator2Page> {
               ),
               SizedBox(height: 20),
               Text(
-                'Uploading...',
+                'Hang Tight...',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
