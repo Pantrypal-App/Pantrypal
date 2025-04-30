@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'donator_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PhysicalGoodsDonationPage extends StatefulWidget {
   @override
@@ -9,34 +11,93 @@ class PhysicalGoodsDonationPage extends StatefulWidget {
 
 class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   TextEditingController searchController = TextEditingController();
-  List<Map<String, String>> donations = [
-    {
-      'title': 'Bicol Region',
-      'subtitle': 'Needs food and clothing after typhoon.',
-      'count': '2,540 items donated'
-    },
-    {
-      'title': 'Manila Animal Rescue Shelter',
-      'subtitle': 'Pet food and blankets needed.',
-      'count': '1,320 items donated'
-    },
-    {
-      'title': 'Bangsamoro Autonomous Region',
-      'subtitle': 'School supplies for children.',
-      'count': '980 items donated'
-    },
-    {
-      'title': 'Leyte',
-      'subtitle': 'Hygiene kits and canned goods needed.',
-      'count': '3,412 items donated'
-    },
-  ];
+  List<Map<String, String>> donations = [];
   List<Map<String, String>> filteredDonations = [];
+  bool isLoading = true;
+  bool hasError = false;
+
+  final String apiKey = 'a4b2de65ff5e632d3361fc3404f2f6a4';
+
+  String ongoingUrl = '';
+  String loveUrl = '';
 
   @override
   void initState() {
     super.initState();
-    filteredDonations = donations;
+    ongoingUrl = 'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
+    loveUrl = 'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
+    
+    fetchNews();
+  }
+
+  Future<void> fetchNews() async {
+    try {
+      final query = 'food OR hunger OR health OR disaster';
+      final searchUrl = Uri.parse(
+          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=$apiKey');
+
+      // Create futures for all the URLs
+      final searchFuture = http.get(searchUrl);
+      final ongoingFuture = http.get(Uri.parse(ongoingUrl));
+      final loveFuture = http.get(Uri.parse(loveUrl));
+
+      // Wait for all of them to complete
+      final responses = await Future.wait([searchFuture, ongoingFuture, loveFuture]);
+
+      List<dynamic> allArticles = [];
+      
+      // Parse the responses from all three URLs
+      for (final response in responses) {
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final List<dynamic> articles = data['articles'] ?? [];
+          allArticles.addAll(articles);
+        } else {
+          throw Exception('Failed to load news from one or more sources');
+        }
+      }
+
+      // Remove duplicates based on 'url'
+      Set<String> seenUrls = Set();
+      allArticles = allArticles.where((article) {
+        final url = article['url'];
+        if (url == null || seenUrls.contains(url)) {
+          return false;
+        } else {
+          seenUrls.add(url);
+          return true;
+        }
+      }).toList();
+
+      final filteredArticles = allArticles.where((article) {
+        final dateStr = article['publishedAt'] ?? '';
+        if (dateStr.isEmpty) return false;
+        final pubDate = DateTime.tryParse(dateStr);
+        if (pubDate == null) return false;
+        return pubDate.year >= 2024 && pubDate.year <= 2025;
+      }).toList();
+
+      final List<Map<String, String>> loadedDonations =
+          filteredArticles.map<Map<String, String>>((article) {
+        return {
+          'title': article['title']?.toString() ?? 'No Title',
+          'subtitle': article['description']?.toString() ?? 'No Description',
+          'count': '${(1000 + article['title'].hashCode % 3000)} donations',
+        };
+      }).toList();
+
+      setState(() {
+        donations = loadedDonations;
+        filteredDonations = loadedDonations;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error: $e");
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
   }
 
   void filterDonations(String query) {
@@ -52,10 +113,7 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text('', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.green,
       ),
       body: SingleChildScrollView(
@@ -63,9 +121,8 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
             Text(
-              'Donate Physical Goods',
+              'Physical Goods Donation',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -73,8 +130,6 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
               ),
             ),
             SizedBox(height: 12),
-
-            // Statistics Section (Graph + Text)
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -91,7 +146,6 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Graph Image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.asset(
@@ -115,8 +169,6 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
               ),
             ),
             SizedBox(height: 20),
-
-            // Search Bar
             TextField(
               controller: searchController,
               onChanged: filterDonations,
@@ -133,27 +185,31 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
               ),
             ),
             SizedBox(height: 20),
-
-            // Donation List
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: filteredDonations.length,
-              itemBuilder: (context, index) {
-                return _donationItem(
-                  filteredDonations[index]['title']!,
-                  filteredDonations[index]['subtitle']!,
-                  filteredDonations[index]['count']!,
-                );
-              },
-            ),
+            if (isLoading)
+              Center(child: CircularProgressIndicator())
+            else if (hasError)
+              Center(
+                  child: Text("Failed to load news.",
+                      style: TextStyle(color: Colors.red)))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: filteredDonations.length,
+                itemBuilder: (context, index) {
+                  return _donationItem(
+                    filteredDonations[index]['title']!,
+                    filteredDonations[index]['subtitle']!,
+                    filteredDonations[index]['count']!,
+                  );
+                },
+              ),
           ],
         ),
       ),
     );
   }
 
-  // Donation Card Widget
   Widget _donationItem(String title, String subtitle, String count) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 6),
@@ -170,34 +226,50 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                SizedBox(height: 4),
-                Text(
-                  '$subtitle\n$count as of Dec 2024',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                ),
-              ],
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(right: 12), // ✅ spacing from button
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '$subtitle\n$count as of Dec 2024',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => DonatorPage()),
+                MaterialPageRoute(
+                  builder: (context) => DonatorPage(
+
+                  ),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromARGB(93, 0, 255, 68),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: Text('Donate',
-                style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: Text(
+              'Donate',
+              style: TextStyle(color: Colors.white, fontSize: 12),
+            ),
           ),
         ],
       ),

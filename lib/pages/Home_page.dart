@@ -846,25 +846,6 @@ class _EmergencyAidSectionState extends State<EmergencyAidSection> {
                           ),
                         ),
                       ),
-                      Positioned(
-                        bottom: 10,
-                        left: 10,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          child: Text(
-                            "Read More",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(216, 33, 149, 243),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 );
