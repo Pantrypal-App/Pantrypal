@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'donator2_page.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MonetaryDonationPage extends StatefulWidget {
   @override
@@ -188,7 +188,14 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => Donator2Page()),
+                MaterialPageRoute(
+                  builder: (context) => Donator2Page(
+                    userId: FirebaseAuth.instance.currentUser?.uid ??
+                        '', // Or get the user ID as needed
+                    name: FirebaseAuth.instance.currentUser?.displayName ??
+                        'Guest', // Or get the name as needed
+                  ),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(

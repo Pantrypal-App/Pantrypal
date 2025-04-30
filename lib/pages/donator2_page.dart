@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,19 +11,31 @@ import 'dart:convert';
 import 'package:image/image.dart' as img;
 
 class Donator2Page extends StatefulWidget {
+  final String userId;
+  final String name;
+
+  // Updated constructor to accept the userId and name parameters
+  Donator2Page({required this.userId, required this.name});
+
   @override
   _Donator2PageState createState() => _Donator2PageState();
 }
 
 class _Donator2PageState extends State<Donator2Page> {
-  String selectedPayment = 'Gcash'; // Default payment method
+  String selectedPayment = 'Gcash';
   final TextEditingController nameController = TextEditingController();
   final TextEditingController numberController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
-  final TextEditingController additionalInfoController =
-      TextEditingController();
+  final TextEditingController additionalInfoController = TextEditingController();
+  bool isNameLocked = false;
 
-  // Function to get dynamic label
+  @override
+  void initState() {
+    super.initState();
+    nameController.text = widget.name;
+    isNameLocked = true;
+  }
+
   String getPaymentLabel() {
     switch (selectedPayment) {
       case 'PayPal':
@@ -38,50 +51,30 @@ class _Donator2PageState extends State<Donator2Page> {
 
   File? _pickedImage;
 
-// Function to pick image
   Future<void> pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
-
-      // Compress the image
       final bytes = await imageFile.readAsBytes();
       img.Image? image = img.decodeImage(bytes);
 
       if (image != null) {
-        final compressedBytes =
-            img.encodeJpg(image, quality: 60); // reduce quality
+        final compressedBytes = img.encodeJpg(image, quality: 60);
         final tempDir = Directory.systemTemp;
-        final targetPath =
-            '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final compressedFile =
-            await File(targetPath).writeAsBytes(compressedBytes);
+        final targetPath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final compressedFile = await File(targetPath).writeAsBytes(compressedBytes);
         setState(() {
           _pickedImage = compressedFile;
         });
       } else {
         setState(() {
-          _pickedImage = imageFile; // fallback to original
+          _pickedImage = imageFile;
         });
       }
     }
   }
 
-// Function to upload image to Firebase Storage
-  Future<String?> uploadImageToFirebase() async {
-    if (_pickedImage == null) return null;
-
-    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    Reference ref = FirebaseStorage.instance.ref().child('receipts/$fileName');
-
-    await ref.putFile(_pickedImage!);
-    String downloadUrl = await ref.getDownloadURL();
-    return downloadUrl;
-  }
-
-// Function to upload image to ImgBB
   Future<String?> uploadImageToImgBB(File imageFile) async {
     final apiKey = 'b1964c76eec82b6bc38b376b91e42c1a';
     final base64Image = base64Encode(await imageFile.readAsBytes());
@@ -103,19 +96,16 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Future<void> saveDonation() async {
-    // Trim spaces from input fields
-    String name = nameController.text.trim();
     String eWalletNumber = numberController.text.trim();
     String amount = amountController.text.trim();
 
-    if (name.isEmpty || eWalletNumber.isEmpty || amount.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text('Please fill in all required fields and upload a receipt')));
-      return; // Exit the function if validation fails
+    if (eWalletNumber.isEmpty || amount.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in all required fields and upload a receipt')),
+      );
+      return;
     }
 
-    // Validate that the amount is a valid number
     if (double.tryParse(amount) == null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Please enter a valid amount')));
@@ -133,63 +123,24 @@ class _Donator2PageState extends State<Donator2Page> {
       double latitude = 14.1084;
       double longitude = 121.1416;
 
-      final existingUserSnapshot = await FirebaseFirestore.instance
-          .collection('donators')
-          .where('name', isEqualTo: name)
-          .where('e_wallet_number', isEqualTo: eWalletNumber)
-          .limit(1)
-          .get();
-
-      String userId;
-
-      if (existingUserSnapshot.docs.isNotEmpty) {
-        // User exists, reuse their ID
-        userId = existingUserSnapshot.docs.first.id;
-      } else {
-        // New user, create and get ID
-        final newUserRef =
-            await FirebaseFirestore.instance.collection('donators').add({
-          'name': name,
-          'e_wallet_number': eWalletNumber,
-          'created_at': FieldValue.serverTimestamp(),
-        });
-        userId = newUserRef.id;
-      }
-
-      final parentDocRef = FirebaseFirestore.instance
-          .collection('monetary_donations')
-          .doc(userId);
-
-      // ✅ Create parent doc first to avoid subcollection warning
-      await parentDocRef.set({
-        'name': name,
-        'e_wallet_number': eWalletNumber,
-        'exists': true,
-        'created_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      final donationsRef = parentDocRef.collection('donations');
-
       final donationData = {
-        'userId': userId,
-        'name': name,
-        'payment_method': selectedPayment,
-        'e_wallet_number': eWalletNumber,
+        'userId': widget.userId,
         'amount': double.parse(amount),
         'additional_info': additionalInfoController.text,
-        'latitude': latitude,
-        'longitude': longitude,
         'receipt_url': receiptUrl,
         'timestamp': FieldValue.serverTimestamp(),
       };
 
-      await donationsRef.add(donationData);
+      final parentDocRef = FirebaseFirestore.instance
+          .collection('monetary_donations')
+          .doc(widget.userId)
+          .collection('donations');
+
+      await parentDocRef.add(donationData);
 
       Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Donation saved successfully!')));
-
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Donation saved successfully!')));
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       Navigator.of(context).pop();
@@ -200,7 +151,7 @@ class _Donator2PageState extends State<Donator2Page> {
 
   Future<void> showLoadingDialog(BuildContext context) async {
     return showDialog(
-      barrierDismissible: false, // prevent closing it accidentally
+      barrierDismissible: false,
       context: context,
       builder: (context) {
         return Center(
@@ -220,18 +171,9 @@ class _Donator2PageState extends State<Donator2Page> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(
-                  color: Colors.green,
-                ),
+                CircularProgressIndicator(color: Colors.green),
                 SizedBox(height: 20),
-                Text(
-                  'Hang Tight...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text('Hang Tight...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
               ],
             ),
           ),
@@ -244,8 +186,7 @@ class _Donator2PageState extends State<Donator2Page> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Monetary Donation',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Monetary Donation', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.green,
       ),
       body: SingleChildScrollView(
@@ -253,14 +194,10 @@ class _Donator2PageState extends State<Donator2Page> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            _buildTextField('Name', controller: nameController),
+            _buildTextField('Name', controller: nameController, readOnly: isNameLocked),
             _buildTextField(getPaymentLabel(), controller: numberController),
             _buildTextField('Amount', controller: amountController),
-            _buildTextField('Additional Information',
-                maxLines: 3, controller: additionalInfoController),
+            _buildTextField('Additional Information', maxLines: 3, controller: additionalInfoController),
             SizedBox(height: 20),
             Text('Select Payment Method:'),
             DropdownButton<String>(
@@ -277,8 +214,7 @@ class _Donator2PageState extends State<Donator2Page> {
                 });
               },
             ),
-            Text('Upload your e-wallet receipt:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Upload your e-wallet receipt:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: pickImage,
@@ -286,13 +222,9 @@ class _Donator2PageState extends State<Donator2Page> {
               label: Text('Upload Receipt'),
             ),
             SizedBox(height: 10),
-            _pickedImage != null
-                ? Image.file(_pickedImage!, height: 150)
-                : Text('No receipt uploaded yet.'),
+            _pickedImage != null ? Image.file(_pickedImage!, height: 150) : Text('No receipt uploaded yet.'),
             SizedBox(height: 20),
-            SizedBox(height: 20),
-            Text('The location for your donation:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('The location for your donation:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             _buildMapView(),
             SizedBox(height: 20),
@@ -301,10 +233,7 @@ class _Donator2PageState extends State<Donator2Page> {
                 backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                 minimumSize: Size(double.infinity, 50),
               ),
-              onPressed: () {
-                // Save the donation information and then navigate to PaymentPage
-                saveDonation();
-              },
+              onPressed: saveDonation,
               child: Text('Donate Now', style: TextStyle(color: Colors.white)),
             ),
           ],
@@ -314,12 +243,13 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Widget _buildTextField(String label,
-      {int maxLines = 1, TextEditingController? controller}) {
+      {int maxLines = 1, TextEditingController? controller, bool readOnly = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        readOnly: readOnly,
         decoration: InputDecoration(
           border: OutlineInputBorder(),
           labelText: label,
