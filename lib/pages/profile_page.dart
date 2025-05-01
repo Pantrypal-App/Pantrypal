@@ -19,6 +19,7 @@ import 'ranking_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
+import 'aboutus_page.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -302,7 +303,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           );
                         }),
                         _buildOption(Icons.share, "Share"),
-                        _buildOption(Icons.group, "About us"),
+                        _buildOption(Icons.group, "About us", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => AboutUsPage()),
+                          );
+                        }),
                       ],
                     ),
                   ),
