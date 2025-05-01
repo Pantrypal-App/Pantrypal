@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_page.dart';
 import 'Home_page.dart';
 import 'Donate_page.dart';
@@ -23,44 +25,53 @@ class _NotificationPageState extends State<NotificationPage> {
     TabItem(icon: Icons.person, title: 'You'),
   ];
 
-  final List<Map<String, dynamic>> notifications = [
-    {
-      "icon": Icons.notifications_active,
-      "title": "Hey, World-Changer!",
+  @override
+  void initState() {
+    super.initState();
+    _sendGreetingIfNew();
+  }
+
+  Future<void> _sendGreetingIfNew() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final greetingDoc = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: user.uid)
+        .where('title', isEqualTo: 'Welcome Back!')
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get();
+
+    if (greetingDoc.docs.isEmpty) {
+      await _addGreeting(user);
+      return;
+    }
+
+    final lastTimestamp =
+        (greetingDoc.docs.first.data()['timestamp'] as Timestamp).toDate();
+    final lastGreetingDate =
+        DateTime(lastTimestamp.year, lastTimestamp.month, lastTimestamp.day);
+
+    if (today.isAfter(lastGreetingDate)) {
+      await _addGreeting(user);
+    }
+  }
+
+  Future<void> _addGreeting(User user) async {
+    await FirebaseFirestore.instance.collection("notifications").add({
+      "userId": user.uid,
+      "title": "Welcome Back!",
       "message":
-          "We just wanted to brighten your day with a little hello. Have a blast day, World-Changer.",
-      "color": Colors.amber,
-      "time": "Yesterday",
-      "isRecent": false
-    },
-    {
-      "icon": Icons.favorite,
-      "title": "You are a Hero Today!",
-      "message":
-          "Your generous donation has been received and will help the people in need. Together, we're creating change!",
-      "color": Colors.blue,
-      "time": "10 hours ago",
-      "isRecent": true
-    },
-    {
-      "icon": Icons.eco,
-      "title": "Your Kindness Fulfills the World!",
-      "message":
-          "Explore new causes and see how small actions create big impact. Let’s keep making a difference together!",
-      "color": Colors.green,
-      "time": "6 hours ago",
-      "isRecent": true
-    },
-    {
-      "icon": Icons.volunteer_activism,
-      "title": "Ready to make a difference today?",
-      "message":
-          "Discover new opportunities to support causes that matter to you. Together, we can create a brighter future.",
-      "color": Colors.pink,
-      "time": "2 hours ago",
-      "isRecent": true
-    },
-  ];
+          "Great to see you again, ${user.displayName ?? 'World-Changer'}!",
+      "icon": "notifications_active",
+      "color": "amber",
+      "timestamp": FieldValue.serverTimestamp(),
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,15 +109,40 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.all(10),
-              children: notifications
-                  .where((notif) =>
-                      selectedFilter == "All" || notif["isRecent"] == true)
-                  .map((notif) {
-                return _buildNotificationItem(notif["icon"], notif["title"],
-                    notif["message"], notif["color"], notif["time"]);
-              }).toList(),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('notifications')
+                  .where('userId',
+                      isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No notifications yet."));
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(10),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+
+                    return _buildNotificationItem(
+                      _getIconFromName(data['icon'] ?? 'notifications'),
+                      data['title'] ?? 'No Title',
+                      data['message'] ?? '',
+                      _getColorFromName(data['color'] ?? 'grey'),
+                      _formatTimestamp(data['timestamp']),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -212,5 +248,48 @@ class _NotificationPageState extends State<NotificationPage> {
             horizontal: 12, vertical: 6), // Compact padding
       ),
     );
+  }
+
+  IconData _getIconFromName(String iconName) {
+    switch (iconName) {
+      case 'favorite':
+        return Icons.favorite;
+      case 'eco':
+        return Icons.eco;
+      case 'volunteer_activism':
+        return Icons.volunteer_activism;
+      case 'notifications_active':
+        return Icons.notifications_active;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  Color _getColorFromName(String colorName) {
+    switch (colorName) {
+      case 'amber':
+        return Colors.amber;
+      case 'blue':
+        return Colors.blue;
+      case 'green':
+        return Colors.green;
+      case 'pink':
+        return Colors.pink;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return '';
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inMinutes < 60) return "${diff.inMinutes} min ago";
+    if (diff.inHours < 24) return "${diff.inHours} hours ago";
+    if (diff.inDays < 7) return "${diff.inDays} days ago";
+
+    return "${date.month}/${date.day}/${date.year}";
   }
 }

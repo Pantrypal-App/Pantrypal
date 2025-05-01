@@ -26,7 +26,8 @@ class _Donator2PageState extends State<Donator2Page> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController numberController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
-  final TextEditingController additionalInfoController = TextEditingController();
+  final TextEditingController additionalInfoController =
+      TextEditingController();
   bool isNameLocked = false;
 
   @override
@@ -52,7 +53,8 @@ class _Donator2PageState extends State<Donator2Page> {
   File? _pickedImage;
 
   Future<void> pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
@@ -62,8 +64,10 @@ class _Donator2PageState extends State<Donator2Page> {
       if (image != null) {
         final compressedBytes = img.encodeJpg(image, quality: 60);
         final tempDir = Directory.systemTemp;
-        final targetPath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final compressedFile = await File(targetPath).writeAsBytes(compressedBytes);
+        final targetPath =
+            '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final compressedFile =
+            await File(targetPath).writeAsBytes(compressedBytes);
         setState(() {
           _pickedImage = compressedFile;
         });
@@ -101,7 +105,9 @@ class _Donator2PageState extends State<Donator2Page> {
 
     if (eWalletNumber.isEmpty || amount.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all required fields and upload a receipt')),
+        SnackBar(
+            content: Text(
+                'Please fill in all required fields and upload a receipt')),
       );
       return;
     }
@@ -139,14 +145,23 @@ class _Donator2PageState extends State<Donator2Page> {
       await parentDocRef.add(donationData);
 
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Donation saved successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Donation saved successfully!')));
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error saving donation: $e')));
     }
+
+    await FirebaseFirestore.instance.collection("notifications").add({
+      "userId": FirebaseAuth.instance.currentUser!.uid,
+      "title": "You are a Hero Today!",
+      "message": "Your generous donation has been received. Thank you!",
+      "icon": "favorite",
+      "color": "blue",
+      "timestamp": FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> showLoadingDialog(BuildContext context) async {
@@ -173,7 +188,11 @@ class _Donator2PageState extends State<Donator2Page> {
               children: [
                 CircularProgressIndicator(color: Colors.green),
                 SizedBox(height: 20),
-                Text('Hang Tight...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                Text('Hang Tight...',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87)),
               ],
             ),
           ),
@@ -186,7 +205,8 @@ class _Donator2PageState extends State<Donator2Page> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Monetary Donation', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Monetary Donation',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.green,
       ),
       body: SingleChildScrollView(
@@ -194,10 +214,12 @@ class _Donator2PageState extends State<Donator2Page> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTextField('Name', controller: nameController, readOnly: isNameLocked),
+            _buildTextField('Name',
+                controller: nameController, readOnly: isNameLocked),
             _buildTextField(getPaymentLabel(), controller: numberController),
             _buildTextField('Amount', controller: amountController),
-            _buildTextField('Additional Information', maxLines: 3, controller: additionalInfoController),
+            _buildTextField('Additional Information',
+                maxLines: 3, controller: additionalInfoController),
             SizedBox(height: 20),
             Text('Select Payment Method:'),
             DropdownButton<String>(
@@ -214,7 +236,8 @@ class _Donator2PageState extends State<Donator2Page> {
                 });
               },
             ),
-            Text('Upload your e-wallet receipt:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Upload your e-wallet receipt:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: pickImage,
@@ -222,9 +245,12 @@ class _Donator2PageState extends State<Donator2Page> {
               label: Text('Upload Receipt'),
             ),
             SizedBox(height: 10),
-            _pickedImage != null ? Image.file(_pickedImage!, height: 150) : Text('No receipt uploaded yet.'),
+            _pickedImage != null
+                ? Image.file(_pickedImage!, height: 150)
+                : Text('No receipt uploaded yet.'),
             SizedBox(height: 20),
-            Text('The location for your donation:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('The location for your donation:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             _buildMapView(),
             SizedBox(height: 20),
@@ -243,7 +269,9 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Widget _buildTextField(String label,
-      {int maxLines = 1, TextEditingController? controller, bool readOnly = false}) {
+      {int maxLines = 1,
+      TextEditingController? controller,
+      bool readOnly = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
