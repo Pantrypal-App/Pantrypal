@@ -12,6 +12,7 @@ import 'gamification_page.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'donationbreakdown.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -739,7 +740,12 @@ class DonationBreakdownSection extends StatelessWidget {
                         SizedBox(height: 17),
                         ElevatedButton(
                           onPressed: () {
-                            // Add navigation or action here
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      DonationBreakdownPage()),
+                            );
                           },
                           child: Text("Learn More"),
                           style: ElevatedButton.styleFrom(
