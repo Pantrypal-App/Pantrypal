@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FeedbackPage extends StatefulWidget {
   @override
@@ -15,7 +17,69 @@ class _FeedbackPageState extends State<FeedbackPage> {
     "Privacy Settings",
     "Additional Features"
   ];
-  
+
+  Set<String> selectedCategories = {};
+  final TextEditingController feedbackController = TextEditingController();
+
+  Future<void> submitFeedback() async {
+    if (selectedStars == 0 && feedbackController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please provide a rating or feedback.")),
+      );
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("You must be logged in to submit feedback.")),
+        );
+        return;
+      }
+
+      // Get username from users collection
+      final userDoc = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+      final username = userDoc.data()?['username'] ?? 'Unknown';
+      final email = user.email ?? 'No email';
+
+      await FirebaseFirestore.instance.collection("feedbacks").add({
+        "rating": selectedStars,
+        "categories": selectedCategories.toList(),
+        "feedback": feedbackController.text.trim(),
+        "username": username,
+        "email": email,
+        "timestamp": FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Thank you for your feedback!")),
+      );
+
+      setState(() {
+        selectedStars = 0;
+        selectedCategories.clear();
+        feedbackController.clear();
+      });
+    } catch (e) {
+      print("Error saving feedback: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to submit feedback.")),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    feedbackController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,6 +136,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             ),
             SizedBox(height: 20),
             TextField(
+              controller: feedbackController,
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: "Tell us on how we can improve.",
@@ -88,7 +153,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   backgroundColor: const Color.fromARGB(93, 0, 255, 68),
                   padding: EdgeInsets.symmetric(vertical: 12),
                 ),
-                onPressed: () {},
+                onPressed: submitFeedback,
                 child: Text(
                   "Submit",
                   style: TextStyle(fontSize: 16, color: Colors.white),
