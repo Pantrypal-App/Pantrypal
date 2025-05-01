@@ -7,18 +7,16 @@ class AccountDetailsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
-        centerTitle: true, // Ensures title is centered
+        centerTitle: true,
         title: Text(
           "Account Details",
           style: TextStyle(
-            color: Colors.white, // Makes text white
+            color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize:
-                MediaQuery.of(context).size.width * 0.05, // Adjust font size
+            fontSize: MediaQuery.of(context).size.width * 0.05,
           ),
         ),
-        iconTheme:
-            IconThemeData(color: Colors.white), // Ensures back button is white
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -65,47 +63,67 @@ class DonationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 8.0), // Adds space between items
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Card(
-        elevation: 3, // Adds a subtle shadow effect
+        elevation: 3,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15), // Rounded corners
+          borderRadius: BorderRadius.circular(15),
         ),
-        child: ListTile(
-          contentPadding: EdgeInsets.symmetric(
-              horizontal: 16, vertical: 10), // Adjust padding
-          leading:
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Icon(Icons.volunteer_activism, color: Colors.green, size: 30),
-          title: Text(title,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          subtitle: Text(date,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-          trailing: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              side: BorderSide(color: Colors.green),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TransactionDetailsPage(
-                    transactionId: "D12345",
-                    donor: "Renoir Regidor",
-                    recipient: "Jayson Villa",
-                    donationType: "Food",
-                    donationAmount: "PHP 10,000.00",
-                    status: "Confirmed",
-                    deliveredOn: "January 18, 2025",
-                    donationDate: "January 18, 2025",
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      date,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: Colors.green),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-              );
-            },
-            child: Text("Details", style: TextStyle(color: Colors.green)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailsPage(
+                        transactionId: "D12345",
+                        donor: "Renoir Regidor",
+                        recipient: "Jayson Villa",
+                        donationType: "Food",
+                        donationAmount: "PHP 10,000.00",
+                        status: "Confirmed",
+                        deliveredOn: "January 18, 2025",
+                        donationDate: "January 18, 2025",
+                      ),
+                    ),
+                  );
+                },
+                child: Text("Details", style: TextStyle(color: Colors.green)),
+              ),
+            ],
           ),
         ),
       ),
