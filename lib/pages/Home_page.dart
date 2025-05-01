@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'donationbreakdown.dart';
+import 'gettoknowus.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -668,7 +669,12 @@ class GetToKnowUsSection extends StatelessWidget {
                       left: 10,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Add navigation or action here
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      OverviewPage()),
+                            );
                         },
                         child: Text("Read More"),
                         style: ElevatedButton.styleFrom(

@@ -66,7 +66,7 @@ class DonationBreakdownPage extends StatelessWidget {
 
             // All donation sections
             _buildDonationSection(
-              color: Colors.blue,
+              color: Colors.green,
               percentage: '85%',
               title: 'Direct Community Support',
               description:
@@ -80,21 +80,21 @@ class DonationBreakdownPage extends StatelessWidget {
                   'Helps fund transport for pickups and deliveries, fuel costs, and tools needed for safe, timely distribution.',
             ),
             _buildDonationSection(
-              color: Colors.teal,
+              color: Colors.green,
               percentage: '5%',
               title: 'Technology & Platform Maintenance',
               description:
                   'Supports app development, server hosting, security updates, and improvements to ensure smooth and secure donations.',
             ),
             _buildDonationSection(
-              color: Colors.orange,
+              color: Colors.green,
               percentage: '3%',
               title: 'Community Engagement & Education',
               description:
                   'Funds local awareness campaigns, community training on resource sharing, and digital literacy programs to reach underserved groups.',
             ),
             _buildDonationSection(
-              color: Colors.purple,
+              color: Colors.green,
               percentage: '2%',
               title: 'Administrative & Compliance',
               description:
