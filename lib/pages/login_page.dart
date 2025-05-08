@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'register_page.dart';
 import 'Home_page.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -212,7 +213,13 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordPage()),
+                          );
+                        },
                         child: const Text("Forgot Password?"),
                       ),
                     ),
@@ -233,7 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                           elevation: 3,
                         ),
                         child: const Text(
-                          "LOG IN",
+                          "Sign In",
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 18,
@@ -244,11 +251,53 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Google Button - Full Width
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await signOutGoogle(); // Sign out before logging in again
+                          User? user = await signInWithGoogle();
+                          if (user != null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => HomePage()),
+                            );
+                          } else {
+                            // Handle failed sign-in
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    "Google Sign-In failed! Please try again."),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: Image.asset(
+                          "lib/images/images-removebg-preview (3).png",
+                          height: 20,
+                        ),
+                        label: const Text("Sign In With Google",
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
                     // Don't have an account? Sign Up
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don’t have an account?"),
+                        const Text("Don't have an account?"),
                         TextButton(
                           onPressed: () {
                             Navigator.push(
@@ -264,74 +313,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ],
                     ),
-
-                    // Google Button
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              await signOutGoogle(); // Sign out before logging in again
-                              User? user = await signInWithGoogle();
-                              if (user != null) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => HomePage()),
-                                );
-                              } else {
-                                // Handle failed sign-in
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        "Google Sign-In failed! Please try again."),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.grey),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            icon: Image.asset(
-                              "lib/images/images-removebg-preview (3).png",
-                              height: 20,
-                            ),
-                            label: const Text("Google",
-                                style: TextStyle(color: Colors.black)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Facebook Button
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: ElevatedButton.icon(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.grey),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            icon: Image.asset(
-                              "lib/images/Facebook-Logosu-removebg-preview.png",
-                              height: 20,
-                            ),
-                            label: const Text("Facebook",
-                                style: TextStyle(color: Colors.black)),
-                          ),
-                        ),
-                      ),
-                    ])
                   ],
                 ),
               ),
