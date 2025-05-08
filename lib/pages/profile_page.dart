@@ -5,8 +5,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:provider/provider.dart';
-import 'theme_provider.dart';
 import 'AccountDetailsPage.dart';
 import 'donationlist_page.dart';
 import 'messageus_page.dart';
@@ -30,12 +28,17 @@ class _ProfilePageState extends State<ProfilePage> {
   int selectedIndex = 4;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
   User? _user;
   File? _image;
+  String? _userId;
+  String? _username;
+  String? _email;
+  String? _profilePicUrl;
+  
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
@@ -52,21 +55,55 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _getCurrentUser() async {
-    setState(() {
-      _user = _auth.currentUser;
-      _nameController.text = _user?.displayName ?? "";
-    });
-
-    if (_user != null) {
-      DocumentSnapshot userDoc =
-          await _firestore.collection("users").doc(_user!.uid).get();
-      if (userDoc.exists) {
-        String? profilePic = userDoc["profilePic"];
-        if (profilePic != null) {
+    User? currentUser = _auth.currentUser;
+    
+    if (currentUser != null) {
+      _userId = currentUser.uid;
+      _email = currentUser.email;
+      
+      // First check Firestore for user data
+      try {
+        DocumentSnapshot userDoc = await _firestore.collection("users").doc(_userId).get();
+        
+        if (userDoc.exists) {
+          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+          
           setState(() {
-            _user!.updatePhotoURL(profilePic);
+            _user = currentUser;
+            _username = userData['username'] ?? currentUser.displayName ?? '';
+            _profilePicUrl = userData['profilePic'] ?? currentUser.photoURL;
+            _nameController.text = _username ?? '';
+          });
+        } else {
+          // If no document exists yet, use Firebase Auth data and create a document
+          String displayName = currentUser.displayName ?? '';
+          String photoURL = currentUser.photoURL ?? '';
+          
+          // Create user document for first-time users (including Google sign-in)
+          await _firestore.collection("users").doc(_userId).set({
+            "username": displayName,
+            "email": _email,
+            "profilePic": photoURL,
+            "uid": _userId,
+            "createdAt": FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          
+          setState(() {
+            _user = currentUser;
+            _username = displayName;
+            _profilePicUrl = photoURL;
+            _nameController.text = displayName;
           });
         }
+      } catch (e) {
+        print("Error fetching user data: $e");
+        // Fallback to Firebase Auth data
+        setState(() {
+          _user = currentUser;
+          _username = currentUser.displayName ?? '';
+          _profilePicUrl = currentUser.photoURL;
+          _nameController.text = _username ?? '';
+        });
       }
     }
   }
@@ -77,107 +114,167 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _image = File(pickedFile.path);
       });
-      _uploadImage();
-      _uploadImageToImgBB();
+      await _uploadImage();
     }
   }
 
-  Future<void> _uploadImageToImgBB() async {
-    if (_image == null || _user == null) return;
+  Future<void> _uploadImage() async {
+    if (_image == null || _userId == null) return;
+
+    try {
+      // Show loading indicator
+      _showLoadingDialog("Uploading image...");
+      
+      // Upload to Firebase Storage
+      Reference ref = _storage.ref().child("profile_pics/$_userId.jpg");
+      await ref.putFile(_image!);
+      String firebaseImageUrl = await ref.getDownloadURL();
+      
+      // Also upload to ImgBB for backup/CDN
+      String? imgbbUrl = await _uploadImageToImgBB();
+      
+      // Use ImgBB URL if successful, otherwise use Firebase URL
+      String finalImageUrl = imgbbUrl ?? firebaseImageUrl;
+      
+      // Update user's profile pic URL in both Auth and Firestore
+      if (_user != null) {
+        await _user!.updatePhotoURL(finalImageUrl);
+      }
+      
+      await _firestore.collection("users").doc(_userId).update({
+        "profilePic": finalImageUrl,
+      });
+      
+      // Update local state
+      setState(() {
+        _profilePicUrl = finalImageUrl;
+      });
+      
+      // Hide loading dialog
+      Navigator.of(context).pop();
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile picture updated successfully"))
+      );
+    } catch (e) {
+      // Hide loading dialog
+      Navigator.of(context).pop();
+      
+      print("Error uploading image: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update profile picture: $e"))
+      );
+    }
+  }
+
+  Future<String?> _uploadImageToImgBB() async {
+    if (_image == null) return null;
 
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse(
-            "https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
+        Uri.parse("https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
       );
-      request.files
-          .add(await http.MultipartFile.fromPath('image', _image!.path));
+      request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
       var json = jsonDecode(responseData);
 
       if (json["success"]) {
-        String imageUrl = json["data"]["url"];
-        await _user!.updatePhotoURL(imageUrl);
-        await _firestore.collection("users").doc(_user!.uid).set({
-          "profilePic": imageUrl,
-        }, SetOptions(merge: true));
-        _getCurrentUser();
+        return json["data"]["url"];
       }
     } catch (e) {
-      print("Error uploading image: $e");
+      print("Error uploading to ImgBB: $e");
     }
+    return null;
   }
 
-  Future<void> _uploadImage() async {
-    if (_image == null || _user == null) return;
-
-    try {
-      Reference ref = _storage.ref().child("profile_pics/${_user!.uid}.jpg");
-      await ref.putFile(_image!);
-      String imageUrl = await ref.getDownloadURL();
-
-      await _user!.updatePhotoURL(imageUrl);
-      await _firestore.collection("users").doc(_user!.uid).set({
-        "profilePic": imageUrl,
-      }, SetOptions(merge: true));
-      _getCurrentUser();
-    } catch (e) {
-      print("Error uploading image: $e");
-    }
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text(message),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _updateUsername() async {
-    if (_user != null && _nameController.text.isNotEmpty) {
+    if (_userId != null && _nameController.text.isNotEmpty) {
+      String newUsername = _nameController.text.trim();
+      
+      // Don't update if username hasn't changed
+      if (newUsername == _username) return;
+      
       try {
-        String newUsername = _nameController.text.trim();
-        String uid = _user!.uid;
+        _showLoadingDialog("Updating username...");
+        
+        // Check if username is already taken
+        QuerySnapshot existingUser = await _firestore
+            .collection("users")
+            .where("username", isEqualTo: newUsername)
+            .get();
 
-      QuerySnapshot existingUser = await _firestore
-          .collection("users")
-          .where("username", isEqualTo: newUsername)
-          .get();
+        if (existingUser.docs.isNotEmpty && existingUser.docs.first.id != _userId) {
+          // Hide loading dialog
+          Navigator.of(context).pop();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Username already taken"))
+          );
+          return;
+        }
 
-      if (existingUser.docs.isNotEmpty && existingUser.docs.first.id != uid) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Username already taken")),
-        );
-        return;
-      }
-
-        // Save new username to users collection
-        await _user!.updateDisplayName(newUsername);
-        await _firestore.collection("users").doc(uid).set({
+        // Update username in Firebase Auth
+        if (_user != null) {
+          await _user!.updateDisplayName(newUsername);
+        }
+        
+        // Update username in Firestore
+        await _firestore.collection("users").doc(_userId).update({
           "username": newUsername,
-          "email": _user!.email,
-          "profilePic": _user!.photoURL
-        }, SetOptions(merge: true));
+        });
 
-        // Update any matching donations to this user's UID
+        // Update any donations associated with this user
         QuerySnapshot donationSnapshot = await _firestore
             .collection("donations")
-            .where("username", isEqualTo: newUsername)
+            .where("userID", isEqualTo: _userId)
             .get();
 
         for (var doc in donationSnapshot.docs) {
           await doc.reference.update({
-            "userID": uid,
-            // Optional: also update the username for consistency
             "username": newUsername
           });
         }
+        
+        // Update local state
+        setState(() {
+          _username = newUsername;
+        });
+        
+        // Hide loading dialog
+        Navigator.of(context).pop();
 
-        _getCurrentUser();
-
-        // ✅ Success message
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Username updated successfully")),
+          const SnackBar(content: Text("Username updated successfully"))
         );
       } catch (e) {
+        // Hide loading dialog
+        Navigator.of(context).pop();
+        
         print("Error updating username: $e");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to update username: $e")),
+          SnackBar(content: Text("Failed to update username: $e"))
         );
       }
     }
@@ -185,8 +282,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -210,11 +305,11 @@ class _ProfilePageState extends State<ProfilePage> {
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
                         radius: 48,
-                        backgroundImage: _user?.photoURL != null
-                            ? NetworkImage(_user!.photoURL!)
+                        backgroundImage: _profilePicUrl != null
+                            ? NetworkImage(_profilePicUrl!)
                             : null,
                         backgroundColor: Colors.grey[300],
-                        child: _user?.photoURL == null
+                        child: _profilePicUrl == null
                             ? Icon(Icons.camera_alt,
                                 color: Colors.grey[700], size: 30)
                             : null,
@@ -241,7 +336,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Text(
-                  _user?.email ?? "No email found",
+                  _email ?? "No email found",
                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ],

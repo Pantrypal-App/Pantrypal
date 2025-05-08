@@ -12,6 +12,7 @@ class TopDonorsPage extends StatefulWidget {
 class _TopDonorsPageState extends State<TopDonorsPage> {
   List<Map<String, dynamic>> topDonors = [];
   String? currentUserId;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -27,113 +28,123 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
         fetchTopDonors();
       } else {
         print("No current user found");
+        setState(() {
+          isLoading = false;
+        });
       }
     } catch (e) {
       print("Error fetching current user: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // New function to fetch user profile information
+  Future<Map<String, dynamic>> fetchUserProfile(String userId) async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (docSnapshot.exists) {
+        final userData = docSnapshot.data() ?? {};
+        print("Successfully fetched user profile for $userId: $userData");
+        return userData;
+      } else {
+        print("User profile not found for $userId");
+        return {};
+      }
+    } catch (e) {
+      print("Error fetching user profile for $userId: $e");
+      return {};
     }
   }
 
   Future<void> fetchTopDonors() async {
-  try {
-    final snapshot =
-        await FirebaseFirestore.instance.collection('monetary_donations').get();
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('monetary_donations')
+          .orderBy('totalAmount', descending: true)
+          .get();
 
-    Map<String, Map<String, dynamic>> donorsMap = {};
+      List<Map<String, dynamic>> donorList = [];
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final uid = data['uid'];
-      final name = data['name'] ?? 'Anonymous';
-      final amount = double.tryParse(data['amount'].toString()) ?? 0.0;
-      final image = data['image'];
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final userId = doc.id;
+        final totalAmount = data['totalAmount'] ?? 0;
+        
+        // Fetch user profile information
+        final userProfile = await fetchUserProfile(userId);
+        
+        // Use profile data if available, fallback to donation data
+        final name = userProfile['name'] ?? userProfile['fullName'] ?? data['name'] ?? 'Anonymous';
+        
+        // Try multiple possible field names for profile image, with profilePic as the first option
+        final image = userProfile['profilePic'] ?? 
+                      userProfile['profileImage'] ?? 
+                      userProfile['photoURL'] ?? 
+                      userProfile['photoUrl'] ?? 
+                      userProfile['profilePicture'] ?? 
+                      userProfile['avatar'] ?? 
+                      userProfile['image'] ?? 
+                      data['image'] ?? 
+                      'path_to_default_image';
 
-
-
-
-
-      // Use UID if available; fallback to name
-      String uniqueKey = uid ?? name;
-
-
-
-      if (donorsMap.containsKey(uniqueKey)) {
-        donorsMap[uniqueKey]!['amount'] += amount;
-      } else {
-        donorsMap[uniqueKey] = {
-          'uid': uid ?? name,
+        donorList.add({
+          'uid': userId,
           'name': name,
-          'amount': amount,
           'image': image,
-        };
-
-
-
-
-
-
-
-
-
-
-
+          'amount': "₱ ${double.parse(totalAmount.toString()).toStringAsFixed(2)}",
+        });
       }
-    }
 
+      // Sort again (precaution) and assign rank
+      donorList.sort((a, b) => double.parse(b['amount'].toString().replaceAll('₱ ', '')).compareTo(
+          double.parse(a['amount'].toString().replaceAll('₱ ', ''))));
+      for (int i = 0; i < donorList.length; i++) {
+        donorList[i]['rank'] = i + 1;
+      }
 
+      // Handle current user
+      if (currentUserId != null &&
+          !donorList.any((donor) => donor['uid'] == currentUserId)) {
+        // Fetch current user profile
+        final currentUserProfile = await fetchUserProfile(currentUserId!);
+        final currentUserName = currentUserProfile['name'] ?? currentUserProfile['fullName'] ?? 'You';
+        
+        // Try multiple possible field names for profile image, with profilePic as the first option
+        final currentUserImage = currentUserProfile['profilePic'] ?? 
+                                currentUserProfile['profileImage'] ?? 
+                                currentUserProfile['photoURL'] ?? 
+                                currentUserProfile['photoUrl'] ?? 
+                                currentUserProfile['profilePicture'] ?? 
+                                currentUserProfile['avatar'] ?? 
+                                currentUserProfile['image'] ?? 
+                                'path_to_default_image';
+        
+        donorList.add({
+          'uid': currentUserId!,
+          'name': currentUserName,
+          'amount': "₱ 0.00",
+          'rank': donorList.length + 1,
+          'image': currentUserImage,
+        });
+      }
 
-
-
-
-
-
-
-
-
-    List<Map<String, dynamic>> donorList = donorsMap.values.toList()
-      ..sort((a, b) => (b['amount'] as double).compareTo(a['amount'] as double));
-
-
-
-
-
-
-    for (int i = 0; i < donorList.length; i++) {
-      donorList[i]['rank'] = i + 1;
-      donorList[i]['amount'] =
-          "₱ ${double.parse(donorList[i]['amount'].toString()).toStringAsFixed(2)}";
-    }
-
-
-
-
-
-
-
-
-
-    // Add current user if missing
-    bool userInList = donorList.any((d) => d['uid'] == currentUserId);
-    if (!userInList && currentUserId != null) {
-      final user = FirebaseAuth.instance.currentUser;
-      donorList.add({
-        'uid': currentUserId,
-        'name': user?.displayName ?? 'You',
-        'amount': "₱ 0.00",
-        'rank': donorList.length + 1,
-        'image': user?.photoURL,
+      setState(() {
+        topDonors = donorList;
+        isLoading = false;
       });
-
-
+    } catch (e) {
+      print("Error fetching top donors: $e");
+      setState(() {
+        isLoading = false;
+      });
     }
-
-    setState(() {
-      topDonors = donorList;
-    });
-  } catch (e) {
-    print("Error fetching top donors: $e");
   }
-}
-
 
   Widget medal(int rank) {
     switch (rank) {
@@ -168,7 +179,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
           children: [
             CircleAvatar(
               radius: 35,
-              backgroundImage: imagePath != null
+              backgroundImage: (imagePath != null && imagePath != 'path_to_default_image')
                   ? NetworkImage(imagePath)
                   : const AssetImage('assets/default_user.png')
                       as ImageProvider,
@@ -207,9 +218,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    Map<String, dynamic>? currentUserData = topDonors.firstWhere(
+    final currentUserData = topDonors.firstWhere(
       (donor) => donor['uid'] == currentUserId,
       orElse: () => {},
     );
@@ -224,11 +233,11 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
         ),
         title: const Text('Top Donors'),
       ),
-      body: topDonors.isEmpty
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                const SizedBox(height: 16), // Top padding added
+                const SizedBox(height: 16),
                 if (topDonors.length >= 3)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -244,8 +253,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
                 const SizedBox(height: 16),
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.only(top: 10, bottom: 20), // Add space at top and bottom
-
+                    padding: const EdgeInsets.only(top: 10, bottom: 20),
                     itemCount: topDonors.length,
                     itemBuilder: (context, index) {
                       var donor = topDonors[index];
@@ -262,7 +270,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
                           ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundImage: donor["image"] != null
+                              backgroundImage: (donor["image"] != null && donor["image"] != 'path_to_default_image')
                                   ? NetworkImage(donor["image"])
                                   : const AssetImage('assets/default_user.png')
                                       as ImageProvider,
@@ -285,16 +293,15 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
                     },
                   ),
                 ),
-
                 if (currentUserData.isNotEmpty)
                   Container(
                     color: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage: currentUserData["image"] != null
+                          backgroundImage: (currentUserData["image"] != null && currentUserData["image"] != 'path_to_default_image')
                               ? NetworkImage(currentUserData["image"])
                               : const AssetImage('assets/default_user.png')
                                   as ImageProvider,
