@@ -118,36 +118,32 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _uploadImage() async {
-    if (_image == null || _userId == null) return;
+ Future<void> _uploadImage() async {
+  if (_image == null || _userId == null) return;
 
-    try {
-      // Show loading indicator
-      _showLoadingDialog("Uploading image...");
-      
-      // Upload to Firebase Storage
-      Reference ref = _storage.ref().child("profile_pics/$_userId.jpg");
-      await ref.putFile(_image!);
-      String firebaseImageUrl = await ref.getDownloadURL();
-      
-      // Also upload to ImgBB for backup/CDN
-      String? imgbbUrl = await _uploadImageToImgBB();
-      
-      // Use ImgBB URL if successful, otherwise use Firebase URL
-      String finalImageUrl = imgbbUrl ?? firebaseImageUrl;
+  try {
+    // Show loading indicator
+    _showLoadingDialog("Uploading image...");
+    
+    // Skip Firebase Storage entirely and just use ImgBB for now
+    // This will help isolate whether Firebase Storage is the issue
+    String? imgbbUrl = await _uploadImageToImgBB();
+    
+    if (imgbbUrl != null) {
+      // ImgBB upload was successful - use this URL
       
       // Update user's profile pic URL in both Auth and Firestore
       if (_user != null) {
-        await _user!.updatePhotoURL(finalImageUrl);
+        await _user!.updatePhotoURL(imgbbUrl);
       }
       
       await _firestore.collection("users").doc(_userId).update({
-        "profilePic": finalImageUrl,
+        "profilePic": imgbbUrl,
       });
       
       // Update local state
       setState(() {
-        _profilePicUrl = finalImageUrl;
+        _profilePicUrl = imgbbUrl;
       });
       
       // Hide loading dialog
@@ -157,16 +153,64 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile picture updated successfully"))
       );
-    } catch (e) {
-      // Hide loading dialog
-      Navigator.of(context).pop();
-      
-      print("Error uploading image: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update profile picture: $e"))
-      );
+    } else {
+      // ImgBB upload failed, try Firebase Storage
+      try {
+        // Create a unique filename with timestamp to avoid conflicts
+        final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+        final String path = 'profile_images/${_userId}_$timestamp.jpg';
+        final Reference storageRef = _storage.ref().child(path);
+        
+        // Upload file directly
+        final UploadTask uploadTask = storageRef.putFile(_image!);
+        
+        // Wait for upload to complete and get download URL
+        final TaskSnapshot snapshot = await uploadTask;
+        final String firebaseImageUrl = await snapshot.ref.getDownloadURL();
+        
+        // Update user profile
+        if (_user != null) {
+          await _user!.updatePhotoURL(firebaseImageUrl);
+        }
+        
+        await _firestore.collection("users").doc(_userId).update({
+          "profilePic": firebaseImageUrl,
+        });
+        
+        // Update local state
+        setState(() {
+          _profilePicUrl = firebaseImageUrl;
+        });
+        
+        // Hide loading dialog
+        Navigator.of(context).pop();
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile picture updated successfully"))
+        );
+      } catch (firebaseError) {
+        // Hide loading dialog
+        Navigator.of(context).pop();
+        
+        print("Error uploading to Firebase: $firebaseError");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to update profile picture: $firebaseError"))
+        );
+      }
     }
+  } catch (e) {
+    // Hide loading dialog if still showing
+    if (Navigator.canPop(context)) {
+      Navigator.of(context).pop();
+    }
+    
+    print("Error uploading image: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to update profile picture: $e"))
+    );
   }
+}
 
   Future<String?> _uploadImageToImgBB() async {
     if (_image == null) return null;
