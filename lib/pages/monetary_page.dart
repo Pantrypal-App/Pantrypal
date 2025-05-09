@@ -24,9 +24,11 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   @override
   void initState() {
     super.initState();
-    ongoingUrl = 'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
-    loveUrl = 'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
-    
+    ongoingUrl =
+        'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
+    loveUrl =
+        'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
+
     fetchNews();
   }
 
@@ -42,10 +44,11 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
       final loveFuture = http.get(Uri.parse(loveUrl));
 
       // Wait for all of them to complete
-      final responses = await Future.wait([searchFuture, ongoingFuture, loveFuture]);
+      final responses =
+          await Future.wait([searchFuture, ongoingFuture, loveFuture]);
 
       List<dynamic> allArticles = [];
-      
+
       // Parse the responses from all three URLs
       for (final response in responses) {
         if (response.statusCode == 200) {
@@ -168,6 +171,46 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
                 ],
               ),
             ),
+            // GCash Donation Section
+            SizedBox(height: 30),
+            Text(
+              'Donate via GCash',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'You can send your donations via GCash to the number below:',
+              style: TextStyle(fontSize: 16, color: Colors.black),
+            ),
+            SizedBox(height: 10),
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'GCash Number: +63 927 367 943',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    'Please ensure to send your donations to the GCash number above. Your generosity will help those in need. Thank you!',
+                    style: TextStyle(fontSize: 14, color: Colors.black),
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: 20),
             TextField(
               controller: searchController,
@@ -256,7 +299,8 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
                 MaterialPageRoute(
                   builder: (context) => Donator2Page(
                     userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                    name: FirebaseAuth.instance.currentUser?.displayName ?? 'Guest',
+                    name: FirebaseAuth.instance.currentUser?.displayName ??
+                        'Guest',
                   ),
                 ),
               );
