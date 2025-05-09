@@ -62,9 +62,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "lib/images/Black_White_Simple_Initials_Logo___5_-removebg-preview.png"
+  image_path: D:\jayson\Pantrypal\lib\images\logo_1.png
   adaptive_icon_background: "#FFFFFF" # Optional: for Android adaptive icons
-  adaptive_icon_foreground: "lib/images/Black_White_Simple_Initials_Logo___5_-removebg-preview.png" # Optional
+  adaptive_icon_foreground: D:\jayson\Pantrypal\lib\images\logo_1.png # Optional
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
