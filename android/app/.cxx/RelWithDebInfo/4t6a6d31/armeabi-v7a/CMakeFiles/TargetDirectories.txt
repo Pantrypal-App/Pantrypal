@@ -1,0 +1,2 @@
+D:/jayson/Pantrypal/android/app/.cxx/RelWithDebInfo/4t6a6d31/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/jayson/Pantrypal/android/app/.cxx/RelWithDebInfo/4t6a6d31/armeabi-v7a/CMakeFiles/rebuild_cache.dir

@@ -74,4 +74,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - lib/images/
+  - lib/images/
+  - lib/images/images-removebg-preview.png
+  - lib/images/logo_1.png
+    

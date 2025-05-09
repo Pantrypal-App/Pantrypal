@@ -3,14 +3,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'register_page.dart';
-import 'Home_page.dart';
+import 'package:pantrypal/pages/Home_page.dart';
 import 'forgot_password_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
   _LoginPageState createState() => _LoginPageState();
+}
+
+Future<void> checkLoginStatus() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+  if (isLoggedIn) {
+    // Navigate to home page
+  } else {
+    // Navigate to login page
+  }
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -23,8 +35,7 @@ class _LoginPageState extends State<LoginPage> {
         '857082234698-50e42f0mpovfvdig2oga7485cibrpqol.apps.googleusercontent.com',
   );
 
-  bool _obscurePassword = true; // 👁️ Controls visibility
-
+  bool _obscurePassword = true;
   String? emailError;
   String? passwordError;
 
@@ -93,6 +104,9 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Login Successful!"),
         backgroundColor: Colors.green,
@@ -116,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       });
     } catch (e) {
-      print("🛑 Unexpected error: $e"); // Add this line
+      print("🛑 Unexpected error: $e"); 
       setState(() {
         passwordError = "Something went wrong. Please try again.";
       });
@@ -217,7 +231,8 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const ForgotPasswordPage()),
+                                builder: (context) =>
+                                    const ForgotPasswordPage()),
                           );
                         },
                         child: const Text("Forgot Password?"),
@@ -260,6 +275,9 @@ class _LoginPageState extends State<LoginPage> {
                           await signOutGoogle(); // Sign out before logging in again
                           User? user = await signInWithGoogle();
                           if (user != null) {
+                            SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            await prefs.setBool('isLoggedIn', true);
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
@@ -284,7 +302,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         icon: Image.asset(
-                          "lib/images/images-removebg-preview (3).png",
+                          "lib/images/images-removebg-preview.png",
                           height: 20,
                         ),
                         label: const Text("Sign In With Google",
