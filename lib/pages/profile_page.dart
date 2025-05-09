@@ -18,6 +18,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'aboutus_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -29,14 +31,14 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   User? _user;
   File? _image;
   String? _userId;
   String? _username;
   String? _email;
   String? _profilePicUrl;
-  
+
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
 
@@ -56,18 +58,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _getCurrentUser() async {
     User? currentUser = _auth.currentUser;
-    
+
     if (currentUser != null) {
       _userId = currentUser.uid;
       _email = currentUser.email;
-      
+
       // First check Firestore for user data
       try {
-        DocumentSnapshot userDoc = await _firestore.collection("users").doc(_userId).get();
-        
+        DocumentSnapshot userDoc =
+            await _firestore.collection("users").doc(_userId).get();
+
         if (userDoc.exists) {
-          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-          
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
+
           setState(() {
             _user = currentUser;
             _username = userData['username'] ?? currentUser.displayName ?? '';
@@ -78,7 +82,7 @@ class _ProfilePageState extends State<ProfilePage> {
           // If no document exists yet, use Firebase Auth data and create a document
           String displayName = currentUser.displayName ?? '';
           String photoURL = currentUser.photoURL ?? '';
-          
+
           // Create user document for first-time users (including Google sign-in)
           await _firestore.collection("users").doc(_userId).set({
             "username": displayName,
@@ -87,7 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
             "uid": _userId,
             "createdAt": FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-          
+
           setState(() {
             _user = currentUser;
             _username = displayName;
@@ -118,99 +122,97 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
- Future<void> _uploadImage() async {
-  if (_image == null || _userId == null) return;
+  Future<void> _uploadImage() async {
+    if (_image == null || _userId == null) return;
 
-  try {
-    // Show loading indicator
-    _showLoadingDialog("Uploading image...");
-    
-    // Skip Firebase Storage entirely and just use ImgBB for now
-    // This will help isolate whether Firebase Storage is the issue
-    String? imgbbUrl = await _uploadImageToImgBB();
-    
-    if (imgbbUrl != null) {
-      // ImgBB upload was successful - use this URL
-      
-      // Update user's profile pic URL in both Auth and Firestore
-      if (_user != null) {
-        await _user!.updatePhotoURL(imgbbUrl);
-      }
-      
-      await _firestore.collection("users").doc(_userId).update({
-        "profilePic": imgbbUrl,
-      });
-      
-      // Update local state
-      setState(() {
-        _profilePicUrl = imgbbUrl;
-      });
-      
-      // Hide loading dialog
-      Navigator.of(context).pop();
-      
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile picture updated successfully"))
-      );
-    } else {
-      // ImgBB upload failed, try Firebase Storage
-      try {
-        // Create a unique filename with timestamp to avoid conflicts
-        final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-        final String path = 'profile_images/${_userId}_$timestamp.jpg';
-        final Reference storageRef = _storage.ref().child(path);
-        
-        // Upload file directly
-        final UploadTask uploadTask = storageRef.putFile(_image!);
-        
-        // Wait for upload to complete and get download URL
-        final TaskSnapshot snapshot = await uploadTask;
-        final String firebaseImageUrl = await snapshot.ref.getDownloadURL();
-        
-        // Update user profile
+    try {
+      // Show loading indicator
+      _showLoadingDialog("Uploading image...");
+
+      // Skip Firebase Storage entirely and just use ImgBB for now
+      // This will help isolate whether Firebase Storage is the issue
+      String? imgbbUrl = await _uploadImageToImgBB();
+
+      if (imgbbUrl != null) {
+        // ImgBB upload was successful - use this URL
+
+        // Update user's profile pic URL in both Auth and Firestore
         if (_user != null) {
-          await _user!.updatePhotoURL(firebaseImageUrl);
+          await _user!.updatePhotoURL(imgbbUrl);
         }
-        
+
         await _firestore.collection("users").doc(_userId).update({
-          "profilePic": firebaseImageUrl,
+          "profilePic": imgbbUrl,
         });
-        
+
         // Update local state
         setState(() {
-          _profilePicUrl = firebaseImageUrl;
+          _profilePicUrl = imgbbUrl;
         });
-        
+
         // Hide loading dialog
         Navigator.of(context).pop();
-        
+
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profile picture updated successfully"))
-        );
-      } catch (firebaseError) {
-        // Hide loading dialog
-        Navigator.of(context).pop();
-        
-        print("Error uploading to Firebase: $firebaseError");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to update profile picture: $firebaseError"))
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Profile picture updated successfully")));
+      } else {
+        // ImgBB upload failed, try Firebase Storage
+        try {
+          // Create a unique filename with timestamp to avoid conflicts
+          final String timestamp =
+              DateTime.now().millisecondsSinceEpoch.toString();
+          final String path = 'profile_images/${_userId}_$timestamp.jpg';
+          final Reference storageRef = _storage.ref().child(path);
+
+          // Upload file directly
+          final UploadTask uploadTask = storageRef.putFile(_image!);
+
+          // Wait for upload to complete and get download URL
+          final TaskSnapshot snapshot = await uploadTask;
+          final String firebaseImageUrl = await snapshot.ref.getDownloadURL();
+
+          // Update user profile
+          if (_user != null) {
+            await _user!.updatePhotoURL(firebaseImageUrl);
+          }
+
+          await _firestore.collection("users").doc(_userId).update({
+            "profilePic": firebaseImageUrl,
+          });
+
+          // Update local state
+          setState(() {
+            _profilePicUrl = firebaseImageUrl;
+          });
+
+          // Hide loading dialog
+          Navigator.of(context).pop();
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Profile picture updated successfully")));
+        } catch (firebaseError) {
+          // Hide loading dialog
+          Navigator.of(context).pop();
+
+          print("Error uploading to Firebase: $firebaseError");
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content:
+                  Text("Failed to update profile picture: $firebaseError")));
+        }
       }
+    } catch (e) {
+      // Hide loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      print("Error uploading image: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to update profile picture: $e")));
     }
-  } catch (e) {
-    // Hide loading dialog if still showing
-    if (Navigator.canPop(context)) {
-      Navigator.of(context).pop();
-    }
-    
-    print("Error uploading image: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to update profile picture: $e"))
-    );
   }
-}
 
   Future<String?> _uploadImageToImgBB() async {
     if (_image == null) return null;
@@ -218,9 +220,11 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse("https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
+        Uri.parse(
+            "https://api.imgbb.com/1/upload?key=b1964c76eec82b6bc38b376b91e42c1a"),
       );
-      request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
+      request.files
+          .add(await http.MultipartFile.fromPath('image', _image!.path));
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
       var json = jsonDecode(responseData);
@@ -255,26 +259,26 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _updateUsername() async {
     if (_userId != null && _nameController.text.isNotEmpty) {
       String newUsername = _nameController.text.trim();
-      
+
       // Don't update if username hasn't changed
       if (newUsername == _username) return;
-      
+
       try {
         _showLoadingDialog("Updating username...");
-        
+
         // Check if username is already taken
         QuerySnapshot existingUser = await _firestore
             .collection("users")
             .where("username", isEqualTo: newUsername)
             .get();
 
-        if (existingUser.docs.isNotEmpty && existingUser.docs.first.id != _userId) {
+        if (existingUser.docs.isNotEmpty &&
+            existingUser.docs.first.id != _userId) {
           // Hide loading dialog
           Navigator.of(context).pop();
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Username already taken"))
-          );
+              const SnackBar(content: Text("Username already taken")));
           return;
         }
 
@@ -282,7 +286,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (_user != null) {
           await _user!.updateDisplayName(newUsername);
         }
-        
+
         // Update username in Firestore
         await _firestore.collection("users").doc(_userId).update({
           "username": newUsername,
@@ -295,31 +299,27 @@ class _ProfilePageState extends State<ProfilePage> {
             .get();
 
         for (var doc in donationSnapshot.docs) {
-          await doc.reference.update({
-            "username": newUsername
-          });
+          await doc.reference.update({"username": newUsername});
         }
-        
+
         // Update local state
         setState(() {
           _username = newUsername;
         });
-        
+
         // Hide loading dialog
         Navigator.of(context).pop();
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Username updated successfully"))
-        );
+            const SnackBar(content: Text("Username updated successfully")));
       } catch (e) {
         // Hide loading dialog
         Navigator.of(context).pop();
-        
+
         print("Error updating username: $e");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to update username: $e"))
-        );
+            SnackBar(content: Text("Failed to update username: $e")));
       }
     }
   }
@@ -460,6 +460,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       leading: const Icon(Icons.logout, color: Colors.red),
                       onTap: () async {
                         await _auth.signOut();
+                        final prefs = await SharedPreferences.getInstance();
+                        prefs.remove(
+                            'isLoggedIn'); // Remove the stored login state
+
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => LoginPage()),
@@ -525,4 +529,4 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-}
+} 
