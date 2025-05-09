@@ -51,6 +51,14 @@ class _NotificationPageState extends State<NotificationPage> {
       return;
     }
 
+    final data = greetingDoc.docs.first.data();
+    final timestamp = data['timestamp'];
+
+    if (timestamp == null) {
+      // In rare cases where timestamp isn't set yet
+      return;
+    }
+
     final lastTimestamp =
         (greetingDoc.docs.first.data()['timestamp'] as Timestamp).toDate();
     final lastGreetingDate =
@@ -71,6 +79,7 @@ class _NotificationPageState extends State<NotificationPage> {
       "color": "amber",
       "timestamp": FieldValue.serverTimestamp(),
     });
+    print("Greeting notification sent.");
   }
 
   @override
