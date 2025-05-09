@@ -30,10 +30,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId:
-        '857082234698-50e42f0mpovfvdig2oga7485cibrpqol.apps.googleusercontent.com',
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   bool _obscurePassword = true;
   String? emailError;
@@ -82,8 +79,9 @@ class _LoginPageState extends State<LoginPage> {
 
       // Automatically sign in the user if everything is successful
       return user;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("Google Sign-In Error: $e");
+      print("Stack trace: $stackTrace");
       return null;
     }
   }

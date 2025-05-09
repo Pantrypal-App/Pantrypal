@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Home_page.dart';
 import 'login_page.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,6 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkLoginStatus() async {
+     await Firebase.initializeApp(); 
     await Future.delayed(const Duration(seconds: 3));
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
