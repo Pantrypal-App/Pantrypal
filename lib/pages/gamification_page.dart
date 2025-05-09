@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'exchangecoin_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'reward_reader_wrapper.dart';
+import 'home_page.dart';
+
 
 class GamificationPage extends StatefulWidget {
   @override
@@ -101,7 +104,7 @@ class _ReaderPageState extends State<ReaderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Reading Article")),
+      appBar: AppBar(title: Text("Articles")),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: ListView(
@@ -249,7 +252,7 @@ class _GamificationPageState extends State<GamificationPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.monetization_on, color: Colors.white, size: 18),
+                    Icon(Icons.monetization_on, color: Colors.orange, size: 18),
                     SizedBox(width: 5),
                     Text(
                       "Your Coins $coinBalance",
@@ -475,37 +478,38 @@ class _GamificationPageState extends State<GamificationPage> {
           ],
         ),
         trailing: ElevatedButton(
-          onPressed: () async {
-            if (title == "Great Reader") {
-              // 1. Start the reading session
-              await _startReadingSession("great_reader", points);
+  onPressed: () async {
+    if (title == "Great Reader") {
+      // Start reading session (optional if you're not tracking other logic)
+      await _startReadingSession("great_reader", points);
 
-              // 2. Navigate to your homepage (replace with your actual route if needed)
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ReaderPage(
-                    rewardPoints: points,
-                    taskKey: "great_reader",
-                  ),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('This task is not yet implemented.')),
-              );
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isClaimable
-                ? const Color.fromARGB(93, 0, 255, 68)
-                : Colors.blue,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      // Navigate to the homepage wrapped with RewardReaderWrapper
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RewardReaderWrapper(
+            rewardPoints: points,
+            taskKey: "great_reader",
+            child: HomePage(),
           ),
-          child: Text(isClaimable ? "Claim" : "Go",
-              style: TextStyle(color: Colors.white, fontSize: 12)),
         ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('This task is not yet implemented.')),
+      );
+    }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: isClaimable
+        ? const Color.fromARGB(93, 0, 255, 68)
+        : Colors.blue,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ),
+  child: Text(isClaimable ? "Claim" : "Go",
+      style: TextStyle(color: Colors.white, fontSize: 12)),
+),
+
       ),
     );
   }
