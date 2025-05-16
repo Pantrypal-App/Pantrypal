@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'Home_page.dart';
 import 'Donate_page.dart';
 import 'Notification_page.dart';
+import 'package:geocoding/geocoding.dart';
 
 class RequestPage extends StatefulWidget {
   @override
@@ -29,6 +30,8 @@ class _RequestPageState extends State<RequestPage> {
   TextEditingController otherController = TextEditingController();
   TextEditingController nameController = TextEditingController();
   TextEditingController addressController = TextEditingController();
+  LatLng currentLocation = LatLng(14.1084, 121.1416); // Default location
+  MapController mapController = MapController();
 
   final Map<String, String> donationImages = {
     "MONEY": "lib/images/pig 2.png",
@@ -37,6 +40,36 @@ class _RequestPageState extends State<RequestPage> {
     "MEDICINE": "lib/images/medicine 2.png",
     "ANIMAL FOOD": "lib/images/animal-food 2.png",
   };
+
+  @override
+  void initState() {
+    super.initState();
+    addressController.addListener(_onAddressChanged);
+  }
+
+  @override
+  void dispose() {
+    addressController.removeListener(_onAddressChanged);
+    addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onAddressChanged() async {
+    if (addressController.text.isEmpty) return;
+
+    try {
+      List<Location> locations = await locationFromAddress(addressController.text);
+      if (locations.isNotEmpty) {
+        setState(() {
+          currentLocation = LatLng(locations.first.latitude, locations.first.longitude);
+        });
+        mapController.move(currentLocation, 15.0);
+      }
+    } catch (e) {
+      print('Error getting location from address: $e');
+    }
+  }
+
   Future<String> getProfilePhotoUrl() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -64,34 +97,58 @@ class _RequestPageState extends State<RequestPage> {
             otherController.text.isNotEmpty) {
           donationTypes.add("OTHER: ${otherController.text}");
         }
+
         if (nameController.text.isEmpty || addressController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text("Name and Address are required!"),
             backgroundColor: Colors.red,
           ));
-          return; // Exit if name or address is empty
+          return;
         }
-        print("Name: ${nameController.text}");
-      print("Address: ${addressController.text}");
-      print("Donations: $donationTypes");
 
-
-        // Save data to Firestore under the "requests" collection
+        // Save request data
         await FirebaseFirestore.instance.collection('requests').add({
           'userId': user.uid,
           'name': nameController.text,
           'address': addressController.text,
           'donations': donationTypes,
+          'latitude': currentLocation.latitude,
+          'longitude': currentLocation.longitude,
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // Optional: Show a success message
+        // Add notification
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': user.uid,
+          'title': 'Request Submitted!',
+          'message': 'Your request for ${donationTypes.join(", ")} has been submitted. We will process it soon!',
+          'icon': 'request_page',
+          'color': 'blue',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Request submitted successfully!"),
           backgroundColor: Colors.green,
         ));
+
+        // Clear form
+        setState(() {
+          nameController.clear();
+          addressController.clear();
+          otherController.clear();
+          selectedDonations.forEach((key, value) {
+            selectedDonations[key] = false;
+          });
+        });
+
+        // Navigate to home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
       } catch (e) {
-        // Show error message if saving fails
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("Failed to submit request: $e"),
           backgroundColor: Colors.red,
@@ -228,14 +285,25 @@ class _RequestPageState extends State<RequestPage> {
     return SizedBox(
       height: 200,
       child: FlutterMap(
+        mapController: mapController,
         options: MapOptions(
-          initialCenter: LatLng(14.1084, 121.1416),
+          initialCenter: currentLocation,
           initialZoom: 12.0,
         ),
         children: [
           TileLayer(
             urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             subdomains: ['a', 'b', 'c'],
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                width: 40.0,
+                height: 40.0,
+                point: currentLocation,
+                child: Icon(Icons.location_pin, color: Colors.red, size: 40),
+              ),
+            ],
           ),
         ],
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DonatorPage extends StatefulWidget {
   @override
@@ -14,6 +16,8 @@ class _DonatorPageState extends State<DonatorPage> {
   final TextEditingController addressController = TextEditingController();
   final TextEditingController additionalInfoController =
       TextEditingController();
+  LatLng currentLocation = LatLng(14.1084, 121.1416); // Default location
+  MapController mapController = MapController();
 
   String? selectedCity;
   bool isOtherSelected = false;
@@ -37,6 +41,52 @@ class _DonatorPageState extends State<DonatorPage> {
   bool donateClothes = false;
   bool donateAnimalFood = false;
 
+  @override
+  void initState() {
+    super.initState();
+    addressController.addListener(_onAddressChanged);
+  }
+
+  @override
+  void dispose() {
+    addressController.removeListener(_onAddressChanged);
+    addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onAddressChanged() async {
+    if (addressController.text.isEmpty) return;
+
+    try {
+      List<Location> locations = await locationFromAddress(addressController.text);
+      if (locations.isNotEmpty) {
+        setState(() {
+          currentLocation = LatLng(locations.first.latitude, locations.first.longitude);
+        });
+        mapController.move(currentLocation, 15.0);
+      }
+    } catch (e) {
+      print('Error getting location from address: $e');
+    }
+  }
+
+  Future<void> _updateLocationFromCity(String? city) async {
+    if (city == null || city == 'Other') return;
+
+    try {
+      // Add ", Philippines" to make the search more accurate
+      List<Location> locations = await locationFromAddress('$city, Philippines');
+      if (locations.isNotEmpty) {
+        setState(() {
+          currentLocation = LatLng(locations.first.latitude, locations.first.longitude);
+        });
+        mapController.move(currentLocation, 12.0);
+      }
+    } catch (e) {
+      print('Error getting location from city: $e');
+    }
+  }
+
   Future<void> saveDonation() async {
     String name = nameController.text.trim();
     String contact = contactController.text.trim();
@@ -58,30 +108,53 @@ class _DonatorPageState extends State<DonatorPage> {
       );
       return;
     }
+
     List<String> donatedItems = [];
     if (donateFood) donatedItems.add('Food');
     if (donateMedicine) donatedItems.add('Medicine');
     if (donateClothes) donatedItems.add('Clothes');
     if (donateAnimalFood) donatedItems.add('Animal Food');
+
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please sign in to donate.')),
+        );
+        return;
+      }
+
+      // Save donation data
       await FirebaseFirestore.instance.collection('physical_donations').add({
+        'userId': user.uid,
         'name': name,
         'contact': contact,
         'pickup_location': pickupLocation,
         'additional_info': additionalInfoController.text.trim(),
         'donated_items': donatedItems,
-        'latitude': 14.1084,
-        'longitude': 121.1416,
+        'latitude': currentLocation.latitude,
+        'longitude': currentLocation.longitude,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // Add notification
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': user.uid,
+        'title': 'Donation Submitted!',
+        'message': 'Thank you for your donation of ${donatedItems.join(", ")}. We will contact you soon!',
+        'icon': 'volunteer_activism',
+        'color': 'green',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Donation submitted successfully!')),
+        SnackBar(
+          content: Text('Donation submitted successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      Navigator.popUntil(context, (route) => route.isFirst);
-
-      // Optionally, clear the form
+      // Clear the form
       setState(() {
         nameController.clear();
         contactController.clear();
@@ -94,9 +167,15 @@ class _DonatorPageState extends State<DonatorPage> {
         donateClothes = false;
         donateAnimalFood = false;
       });
+
+      // Navigate back to home page
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save donation: $e')),
+        SnackBar(
+          content: Text('Failed to save donation: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -142,6 +221,7 @@ class _DonatorPageState extends State<DonatorPage> {
                     selectedCity = value;
                     isOtherSelected = value == 'Other';
                   });
+                  _updateLocationFromCity(value);
                 },
               ),
               if (isOtherSelected)
@@ -217,14 +297,25 @@ class _DonatorPageState extends State<DonatorPage> {
     return SizedBox(
       height: 200,
       child: FlutterMap(
+        mapController: mapController,
         options: MapOptions(
-          initialCenter: LatLng(14.1084, 121.1416),
+          initialCenter: currentLocation,
           initialZoom: 12.0,
         ),
         children: [
           TileLayer(
             urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             subdomains: ['a', 'b', 'c'],
+          ),
+          MarkerLayer(
+            markers: [
+              Marker(
+                width: 40.0,
+                height: 40.0,
+                point: currentLocation,
+                child: Icon(Icons.location_pin, color: Colors.red, size: 40),
+              ),
+            ],
           ),
         ],
       ),
