@@ -13,6 +13,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
   List<Map<String, dynamic>> topDonors = [];
   String? currentUserId;
   bool isLoading = true;
+  double overallTotal = 0.0;
 
   @override
   void initState() {
@@ -70,11 +71,13 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
           .get();
 
       List<Map<String, dynamic>> donorList = [];
+      double totalAmount = 0.0;
 
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
         final userId = doc.id;
-        final totalAmount = data['totalAmount'] ?? 0;
+        final amount = data['totalAmount'] ?? 0;
+        totalAmount += amount;
         
         // Fetch user profile information
         final userProfile = await fetchUserProfile(userId);
@@ -97,7 +100,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
           'uid': userId,
           'name': name,
           'image': image,
-          'amount': "₱ ${double.parse(totalAmount.toString()).toStringAsFixed(2)}",
+          'amount': "₱ ${double.parse(amount.toString()).toStringAsFixed(2)}",
         });
       }
 
@@ -136,6 +139,7 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
 
       setState(() {
         topDonors = donorList;
+        overallTotal = totalAmount;
         isLoading = false;
       });
     } catch (e) {
@@ -237,7 +241,61 @@ class _TopDonorsPageState extends State<TopDonorsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                const SizedBox(height: 16),
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green.shade400,
+                        Colors.green.shade600,
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Donations',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '₱ ${overallTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Icon(
+                        Icons.volunteer_activism,
+                        color: Colors.white70,
+                        size: 24,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
                 if (topDonors.length >= 3)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image/image.dart' as img;
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class Donator2Page extends StatefulWidget {
   final String userId;
@@ -32,6 +33,79 @@ class _Donator2PageState extends State<Donator2Page> {
   String profilePicUrl = '';
   String userName = '';
   double totalAmount = 0.0;
+  final TextRecognizer _textRecognizer = TextRecognizer();
+  bool _isVerifyingReceipt = false;
+  String? _receiptVerificationError;
+
+  // Update payment method specific patterns
+  final Map<String, Map<String, dynamic>> paymentMethodPatterns = {
+    'Gcash': {
+      'keywords': [
+        'Sent via GCash',
+        'Via GCash',
+        'GCash',
+        'You sent',
+        'Amount',
+        'Total Amount',
+        'PHP',
+        '₱',
+      ],
+      'amountPattern': [
+        r'Amount:?\s*(?:PHP|₱)?\s*([\d,]+(?:\.\d{2})?)',
+        r'You sent:?\s*(?:PHP|₱)?\s*([\d,]+(?:\.\d{2})?)',
+        r'Total Amount:?\s*(?:PHP|₱)?\s*([\d,]+(?:\.\d{2})?)',
+        r'(?:PHP|₱)\s*([\d,]+(?:\.\d{2})?)',
+        r'([\d,]+\.\d{2})',
+      ],
+      'requiredKeywordMatches': 1,  // Only require 1 keyword match
+    },
+    'PayMaya': {
+      'keywords': [
+        'PayMaya',
+        'Reference ID',
+        'PHP',
+      ],
+      'refPattern': r'Reference #:\s*([A-Z0-9]+)',
+      'amountPattern': [
+        r'PHP\s*(\d+\.\d{2})',
+        r'Amount:\s*PHP\s*(\d+\.\d{2})',
+      ],
+      'datePattern': r'(\d{2}\s+[A-Za-z]+\s+\d{4},\s*\d{1,2}:\d{2}\s*[AP]M)',
+    },
+    'PayPal': {
+      'keywords': [
+        'PayPal',
+        'INVOICE',
+        'Invoice number',
+        'Invoice date',
+      ],
+      'refPattern': r'Invoice number\s*(\d+)',
+      'amountPattern': [
+        r'Total\s*£(\d+\.\d{2})',
+        r'Amount\s*£(\d+\.\d{2})',
+        r'\$(\d+\.\d{2})',
+        r'PHP\s*(\d+\.\d{2})',
+      ],
+      'datePattern': r'(\d{2}/\d{2}/\d{4})',
+    },
+    'Bank Transfer': {
+      'keywords': [
+        'transfer',
+        'transaction',
+        'reference',
+        'account',
+        'date',
+        'amount',
+      ],
+      'refPattern': r'Reference(?:\s*#)?\s*:\s*([A-Z0-9]+)',
+      'amountPattern': [
+        r'Amount\s*:\s*PHP\s*(\d+\.\d{2})',
+        r'PHP\s*(\d+\.\d{2})',
+        r'₱\s*(\d+\.\d{2})',
+      ],
+      'datePattern': r'(\d{2}/\d{2}/\d{4})',
+    },
+  };
 
   @override
   void initState() {
@@ -124,6 +198,152 @@ class _Donator2PageState extends State<Donator2Page> {
     }
   }
 
+  Future<bool> verifyReceipt(File imageFile) async {
+    setState(() {
+      _isVerifyingReceipt = true;
+      _receiptVerificationError = null;
+    });
+
+    try {
+      final inputImage = InputImage.fromFile(imageFile);
+      final recognizedText = await _textRecognizer.processImage(inputImage);
+      final text = recognizedText.text;
+      print("Recognized text: $text"); // Debug print
+
+      // Get patterns for selected payment method
+      final methodPatterns = paymentMethodPatterns[selectedPayment];
+      if (methodPatterns == null) {
+        setState(() {
+          _receiptVerificationError = 'Unsupported payment method';
+        });
+        return false;
+      }
+
+      // 1. Check for GCash keywords - now case sensitive
+      final keywords = methodPatterns['keywords'] as List<String>;
+      bool isGcashReceipt = keywords.any((keyword) => text.contains(keyword));
+      print("Is GCash receipt: $isGcashReceipt"); // Debug print
+      print("Found keywords: ${keywords.where((keyword) => text.contains(keyword))}"); // Debug print
+
+      if (!isGcashReceipt) {
+        setState(() {
+          _receiptVerificationError = 'This doesn\'t appear to be a valid GCash receipt. Please upload a GCash receipt.';
+        });
+        return false;
+      }
+
+      // 2. Verify amount with case-sensitive patterns
+      final enteredAmount = double.tryParse(amountController.text.replaceAll(',', '').trim()) ?? 0.0;
+      final amountPatterns = methodPatterns['amountPattern'] as List<String>;
+      
+      Set<double> foundAmounts = {};
+      for (var pattern in amountPatterns) {
+        final regex = RegExp(pattern);
+        for (var match in regex.allMatches(text)) {
+          String? amountStr = match.group(1)?.replaceAll(',', '');
+          print("Found amount string: $amountStr"); // Debug print
+          if (amountStr != null) {
+            double? amount = double.tryParse(amountStr);
+            if (amount != null) {
+              foundAmounts.add(amount);
+              print("Parsed amount: $amount"); // Debug print
+            }
+          }
+        }
+      }
+
+      print("All found amounts: $foundAmounts"); // Debug print
+      bool hasMatchingAmount = foundAmounts.any((amount) => 
+          (amount - enteredAmount).abs() < 0.01);
+
+      if (!hasMatchingAmount) {
+        setState(() {
+          _receiptVerificationError = 'The amount entered (₱${enteredAmount.toStringAsFixed(2)}) doesn\'t match the amount in the receipt.';
+        });
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print("Error verifying receipt: $e");
+      setState(() {
+        _receiptVerificationError = 'Error verifying receipt. Please try again.';
+      });
+      return false;
+    } finally {
+      setState(() {
+        _isVerifyingReceipt = false;
+      });
+    }
+  }
+
+  DateTime? _parseDate(String dateStr) {
+    // List of possible date formats
+    final formats = [
+      // GCash formats
+      RegExp(r'^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)$'),
+      // PayMaya formats
+      RegExp(r'^(\d{2})\s+([A-Za-z]+)\s+(\d{4}),\s*(\d{1,2}):(\d{2})\s*([AP]M)$'),
+      // Standard formats
+      RegExp(r'^(\d{2})/(\d{2})/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)$'),
+    ];
+
+    for (var format in formats) {
+      final match = format.firstMatch(dateStr);
+      if (match != null) {
+        try {
+          final groups = match.groups([1, 2, 3, 4, 5, 6]);
+          
+          int year = int.parse(groups[2]!);
+          int month;
+          int day;
+          
+          if (RegExp(r'^\d{2}$').hasMatch(groups[0]!)) {
+            // DD MM YYYY format
+            day = int.parse(groups[0]!);
+            month = _getMonthNumber(groups[1]!);
+          } else {
+            // Month DD, YYYY format
+            month = _getMonthNumber(groups[0]!);
+            day = int.parse(groups[1]!);
+          }
+          
+          int hour = int.parse(groups[3]!);
+          int minute = int.parse(groups[4]!);
+          String ampm = groups[5]!;
+          
+          // Convert to 24-hour format
+          if (ampm.toUpperCase() == 'PM' && hour != 12) hour += 12;
+          if (ampm.toUpperCase() == 'AM' && hour == 12) hour = 0;
+          
+          return DateTime(year, month, day, hour, minute);
+        } catch (e) {
+          print("Error parsing date with format $format: $e");
+          continue;
+        }
+      }
+    }
+    return null;
+  }
+
+  int _getMonthNumber(String month) {
+    final months = {
+      'January': 1, 'Jan': 1,
+      'February': 2, 'Feb': 2,
+      'March': 3, 'Mar': 3,
+      'April': 4, 'Apr': 4,
+      'May': 5,
+      'June': 6, 'Jun': 6,
+      'July': 7, 'Jul': 7,
+      'August': 8, 'Aug': 8,
+      'September': 9, 'Sep': 9,
+      'October': 10, 'Oct': 10,
+      'November': 11, 'Nov': 11,
+      'December': 12, 'Dec': 12,
+    };
+    return months[month] ?? DateTime.now().month;
+  }
+
   Future<void> saveDonation() async {
     String eWalletNumber = numberController.text.trim();
     String amount = amountController.text.trim();
@@ -145,6 +365,21 @@ class _Donator2PageState extends State<Donator2Page> {
 
     try {
       showLoadingDialog(context);
+      
+      // Verify receipt first
+      bool isValidReceipt = await verifyReceipt(_pickedImage!);
+      
+      if (!isValidReceipt) {
+        Navigator.of(context).pop(); // close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_receiptVerificationError ?? 'Invalid receipt. Please upload a valid receipt.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       String? receiptUrl = await uploadImageToImgBB(_pickedImage!);
 
       if (receiptUrl == null) {
@@ -202,14 +437,30 @@ class _Donator2PageState extends State<Donator2Page> {
       });
 
       Navigator.of(context).pop(); // close loading dialog
+      
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Donation saved successfully!')),
+        SnackBar(
+          content: Text('Thank you for your donation!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
       );
-      Navigator.popUntil(context, (route) => route.isFirst);
+
+      // Add a small delay to allow the snackbar to be visible
+      await Future.delayed(Duration(seconds: 1));
+      
+      // Navigate back to home page
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       Navigator.of(context).pop(); // close loading dialog
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving donation: $e')),
+        SnackBar(
+          content: Text('Error saving donation: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -252,6 +503,12 @@ class _Donator2PageState extends State<Donator2Page> {
         );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _textRecognizer.close();
+    super.dispose();
   }
 
   @override
@@ -308,27 +565,75 @@ class _Donator2PageState extends State<Donator2Page> {
             _buildMapView(),
             SizedBox(height: 20),
             // Profile Info Section
-            profilePicUrl.isNotEmpty
-                ? CircleAvatar(
-                    radius: 50,
-                    backgroundImage: NetworkImage(profilePicUrl),
-                  )
-                : Container(),
-            SizedBox(height: 10),
-            Text(userName,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text('Total Donations: \$${totalAmount.toStringAsFixed(2)}'),
-
-            SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(93, 0, 255, 68),
-                minimumSize: Size(double.infinity, 50),
+            Center(
+              child: Column(
+                children: [
+                  profilePicUrl.isNotEmpty
+                      ? CircleAvatar(
+                          radius: 50,
+                          backgroundImage: NetworkImage(profilePicUrl),
+                        )
+                      : Container(),
+                  SizedBox(height: 10),
+                  Text(userName,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 10),
+                  Text('Total Donations: \$${totalAmount.toStringAsFixed(2)}'),
+                ],
               ),
-              onPressed: saveDonation,
-              child: Text('Donate Now', style: TextStyle(color: Colors.white)),
             ),
+            SizedBox(height: 30),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 3,
+                ),
+                onPressed: () async {
+                  await saveDonation();
+                },
+                child: Text(
+                  'Donate Now',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            if (_receiptVerificationError != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  _receiptVerificationError!,
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            if (_isVerifyingReceipt)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    ),
+                    SizedBox(width: 10),
+                    Text('Verifying receipt...'),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
