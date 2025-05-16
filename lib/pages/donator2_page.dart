@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image/image.dart' as img;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:geocoding/geocoding.dart';
 
 class Donator2Page extends StatefulWidget {
   final String userId;
@@ -41,6 +42,95 @@ class _Donator2PageState extends State<Donator2Page> {
   final TextRecognizer _textRecognizer = TextRecognizer();
   bool _isVerifyingReceipt = false;
   String? _receiptVerificationError;
+  
+  // Add location variables
+  late LatLng donationLocation;
+  final defaultLocation = LatLng(14.1084, 121.1416); // Default location if none provided
+  String detectedLocationName = '';
+
+  // Updated philippinePlaces with more locations and variations
+  final List<Map<String, String>> philippinePlaces = [
+    // Metro Manila Cities
+    {'name': 'Metro Manila', 'type': 'region'},
+    {'name': 'NCR', 'type': 'region'},
+    {'name': 'Quezon City', 'type': 'city'},
+    {'name': 'Manila', 'type': 'city'},
+    {'name': 'Makati', 'type': 'city'},
+    {'name': 'Taguig', 'type': 'city'},
+    {'name': 'Pasig', 'type': 'city'},
+    {'name': 'Mandaluyong', 'type': 'city'},
+    {'name': 'Parañaque', 'type': 'city'},
+    {'name': 'Las Piñas', 'type': 'city'},
+    {'name': 'Muntinlupa', 'type': 'city'},
+    {'name': 'Marikina', 'type': 'city'},
+    {'name': 'San Juan', 'type': 'city'},
+    {'name': 'Valenzuela', 'type': 'city'},
+    {'name': 'Caloocan', 'type': 'city'},
+    {'name': 'Malabon', 'type': 'city'},
+    {'name': 'Navotas', 'type': 'city'},
+    {'name': 'Pasay', 'type': 'city'},
+    {'name': 'Pateros', 'type': 'municipality'},
+
+    // Major Cities
+    {'name': 'Cebu City', 'type': 'city'},
+    {'name': 'Cebu', 'type': 'province'},
+    {'name': 'Davao City', 'type': 'city'},
+    {'name': 'Davao', 'type': 'province'},
+    {'name': 'Baguio City', 'type': 'city'},
+    {'name': 'Baguio', 'type': 'place'},
+    {'name': 'Iloilo City', 'type': 'city'},
+    {'name': 'Iloilo', 'type': 'province'},
+    {'name': 'Bacolod City', 'type': 'city'},
+    {'name': 'Bacolod', 'type': 'place'},
+    {'name': 'Cagayan de Oro', 'type': 'city'},
+    {'name': 'Zamboanga City', 'type': 'city'},
+    {'name': 'Zamboanga', 'type': 'province'},
+    {'name': 'Naga City', 'type': 'city'},
+    {'name': 'Naga', 'type': 'place'},
+    {'name': 'Tacloban City', 'type': 'city'},
+    {'name': 'Tacloban', 'type': 'place'},
+    {'name': 'Lucena City', 'type': 'city'},
+    {'name': 'Lucena', 'type': 'place'},
+    {'name': 'Dagupan City', 'type': 'city'},
+    {'name': 'Dagupan', 'type': 'place'},
+    {'name': 'Olongapo City', 'type': 'city'},
+    {'name': 'Olongapo', 'type': 'place'},
+    {'name': 'Angeles City', 'type': 'city'},
+    {'name': 'Angeles', 'type': 'place'},
+    {'name': 'Batangas City', 'type': 'city'},
+    {'name': 'Batangas', 'type': 'province'},
+
+    // Regions
+    {'name': 'Calabarzon', 'type': 'region'},
+    {'name': 'Region IV-A', 'type': 'region'},
+    {'name': 'Bicol Region', 'type': 'region'},
+    {'name': 'Bicol', 'type': 'region'},
+    {'name': 'Central Luzon', 'type': 'region'},
+    {'name': 'Region III', 'type': 'region'},
+    {'name': 'Western Visayas', 'type': 'region'},
+    {'name': 'Region VI', 'type': 'region'},
+    {'name': 'Central Visayas', 'type': 'region'},
+    {'name': 'Region VII', 'type': 'region'},
+    {'name': 'Eastern Visayas', 'type': 'region'},
+    {'name': 'Region VIII', 'type': 'region'},
+    {'name': 'Northern Mindanao', 'type': 'region'},
+    {'name': 'Region X', 'type': 'region'},
+
+    // Provinces
+    {'name': 'Cavite', 'type': 'province'},
+    {'name': 'Laguna', 'type': 'province'},
+    {'name': 'Batangas', 'type': 'province'},
+    {'name': 'Rizal', 'type': 'province'},
+    {'name': 'Quezon', 'type': 'province'},
+    {'name': 'Pampanga', 'type': 'province'},
+    {'name': 'Bulacan', 'type': 'province'},
+    {'name': 'Nueva Ecija', 'type': 'province'},
+    {'name': 'Pangasinan', 'type': 'province'},
+    {'name': 'La Union', 'type': 'province'},
+    {'name': 'Ilocos Norte', 'type': 'province'},
+    {'name': 'Ilocos Sur', 'type': 'province'},
+    {'name': 'Benguet', 'type': 'province'},
+  ];
 
   // Update payment method specific patterns
   final Map<String, Map<String, dynamic>> paymentMethodPatterns = {
@@ -112,12 +202,138 @@ class _Donator2PageState extends State<Donator2Page> {
     },
   };
 
+  Future<LatLng?> detectLocationFromText(String text) async {
+    try {
+      // Clean and normalize the text
+      String normalizedText = text.toLowerCase()
+          .replaceAll(RegExp(r'[^\w\s,]'), '') // Remove special characters except commas
+          .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
+          .trim();
+
+      // First try exact matches from our predefined list
+      for (var place in philippinePlaces) {
+        String placeName = place['name']!.toLowerCase();
+        if (normalizedText.contains(placeName)) {
+          try {
+            // Try with city/province/region suffix first if it's not already in the name
+            String searchLocation = place['name']!;
+            if (!searchLocation.toLowerCase().contains(place['type']!.toLowerCase())) {
+              searchLocation = "${place['name']}, ${place['type']}, Philippines";
+            } else {
+              searchLocation = "$searchLocation, Philippines";
+            }
+
+            List<Location> locations = await locationFromAddress(searchLocation);
+            if (locations.isNotEmpty) {
+              setState(() {
+                detectedLocationName = "${place['name']} (${place['type']})";
+              });
+              return LatLng(locations.first.latitude, locations.first.longitude);
+            }
+          } catch (e) {
+            print('Error geocoding location: $e');
+            continue;
+          }
+        }
+      }
+
+      // If no exact match found, try to find potential place names
+      List<String> words = normalizedText.split(RegExp(r'[,\s]+'));
+      List<String> locationIndicators = [
+        'in', 'at', 'near', 'around', 'within', 'from', 'to', 'of',
+        'city', 'province', 'region', 'municipality', 'town', 'area',
+        'north', 'south', 'east', 'west', 'central'
+      ];
+
+      for (int i = 0; i < words.length; i++) {
+        // Check if current word is preceded by a location indicator
+        if (i > 0 && locationIndicators.contains(words[i - 1].toLowerCase())) {
+          String possibleLocation = words[i];
+          if (possibleLocation.length > 3) {
+            try {
+              List<Location> locations = await locationFromAddress("$possibleLocation, Philippines");
+              if (locations.isNotEmpty) {
+                setState(() {
+                  detectedLocationName = possibleLocation;
+                });
+                return LatLng(locations.first.latitude, locations.first.longitude);
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+
+        // Try combinations of consecutive words
+        if (i < words.length - 1 && words[i].length > 2) {
+          String combinedLocation = "${words[i]} ${words[i + 1]}";
+          try {
+            List<Location> locations = await locationFromAddress("$combinedLocation, Philippines");
+            if (locations.isNotEmpty) {
+              setState(() {
+                detectedLocationName = combinedLocation;
+              });
+              return LatLng(locations.first.latitude, locations.first.longitude);
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+
+      // If still no location found, try individual words that might be place names
+      for (String word in words) {
+        if (word.length > 3 && !locationIndicators.contains(word.toLowerCase())) {
+          try {
+            List<Location> locations = await locationFromAddress("$word, Philippines");
+            if (locations.isNotEmpty) {
+              setState(() {
+                detectedLocationName = word;
+              });
+              return LatLng(locations.first.latitude, locations.first.longitude);
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in location detection: $e');
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
     nameController.text = widget.name;
     isNameLocked = true;
     _fetchUserProfileData();
+    _initializeLocation();
+  }
+
+  Future<void> _initializeLocation() async {
+    if (widget.articleData != null) {
+      if (widget.articleData!['location'] != null) {
+        // If location is directly provided
+        final location = widget.articleData!['location'] as LatLng;
+        setState(() {
+          donationLocation = location;
+        });
+      } else {
+        // Try to detect location from title and description
+        String searchText = '${widget.articleData!['title']} ${widget.articleData!['subtitle']}';
+        LatLng? detectedLocation = await detectLocationFromText(searchText);
+        
+        setState(() {
+          donationLocation = detectedLocation ?? defaultLocation;
+        });
+      }
+    } else {
+      setState(() {
+        donationLocation = defaultLocation;
+      });
+    }
   }
 
   // Fetching user profile data
@@ -401,8 +617,8 @@ class _Donator2PageState extends State<Donator2Page> {
         throw Exception('Failed to upload receipt image');
       }
 
-      double latitude = 14.1084;
-      double longitude = 121.1416;
+      double latitude = donationLocation.latitude;
+      double longitude = donationLocation.longitude;
 
       final donationData = {
         'userId': widget.userId,
@@ -721,20 +937,57 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Widget _buildMapView() {
-    return SizedBox(
-      height: 200,
-      child: FlutterMap(
-        options: MapOptions(
-          initialCenter: LatLng(14.1084, 121.1416),
-          initialZoom: 12.0,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            subdomains: ['a', 'b', 'c'],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (detectedLocationName.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              detectedLocationName,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
           ),
-        ],
-      ),
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: donationLocation,
+                initialZoom: 13.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: ['a', 'b', 'c'],
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: donationLocation,
+                      width: 40.0,
+                      height: 40.0,
+                      child: Icon(
+                        Icons.location_pin,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
