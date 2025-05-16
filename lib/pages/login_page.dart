@@ -15,62 +15,6 @@ class LoginPage extends StatefulWidget {
   _LoginPageState createState() => _LoginPageState();
 }
 
-Future<void> checkLoginStatus(BuildContext context) async {
-  try {
-    // First check if Firebase has a cached user session
-    User? currentUser = FirebaseAuth.instance.currentUser;
-    
-    if (currentUser != null) {
-      // Firebase says user is already logged in, redirect to home
-      print("User already signed in: ${currentUser.email}");
-      
-      // Update SharedPreferences to match Firebase state
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      
-      // No need to refresh the token or reauth - Firebase handles token refresh automatically
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage()),
-      );
-      return;
-    }
-    
-    // If no active Firebase session, check SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    
-    if (isLoggedIn) {
-      // User was previously logged in but Firebase session expired
-      // This can happen after app updates or after long periods
-      
-      // If they last used Google sign-in, we don't want to force them to sign in manually
-      // Firebase will attempt to refresh the token silently
-      
-      // Wait briefly to see if Firebase auto-restores the session
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Check again if Firebase auto-restored the session
-      currentUser = FirebaseAuth.instance.currentUser;
-      
-      if (currentUser != null) {
-        // Session was restored automatically
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
-      } else {
-        // Force the user to sign in again - their session truly expired
-        // This is expected behavior when user explicitly logged out
-        await prefs.setBool('isLoggedIn', false);
-      }
-    }
-  } catch (e) {
-    print("Error checking login status: $e");
-    // Stay on login page if there's any error
-  }
-}
-
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>(); // Form key for validation
   final TextEditingController emailController = TextEditingController();
@@ -82,24 +26,98 @@ class _LoginPageState extends State<LoginPage> {
   String? emailError;
   String? passwordError;
   bool _isLoading = false;
-  bool _isCheckingLogin = true; // Add flag to track initial login check
+  bool _isCheckingLogin = true;
 
   @override
   void initState() {
     super.initState();
+    // Set Firebase persistence
+    _setPersistence();
     // Check login status when the page initializes
     _checkPreviousLogin();
   }
-  
+
+  Future<void> _setPersistence() async {
+    try {
+      // Set persistence to LOCAL - this will persist the auth state across app restarts
+      await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+    } catch (e) {
+      print("Error setting persistence: $e");
+    }
+  }
+
   Future<void> _checkPreviousLogin() async {
     setState(() {
       _isCheckingLogin = true;
     });
     
     try {
-      await checkLoginStatus(context);
+      // First check if Firebase has a cached user session
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Verify if the token is still valid
+        try {
+          await currentUser.reload();
+          currentUser = FirebaseAuth.instance.currentUser; // Refresh user object
+          
+          if (currentUser != null) {
+            // Token is still valid, update SharedPreferences
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', true);
+            
+            if (!mounted) return;
+            
+            // Navigate to home page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomePage()),
+            );
+            return;
+          }
+        } catch (e) {
+          print("Error reloading user: $e");
+          // Token is invalid, continue with normal flow
+        }
+      }
+      
+      // If no active Firebase session, check SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      bool usedGoogleSignIn = prefs.getBool('usedGoogleSignIn') ?? false;
+      
+      if (isLoggedIn && usedGoogleSignIn) {
+        // Try silent Google sign-in
+        try {
+          final GoogleSignInAccount? googleAccount = await _googleSignIn.signInSilently();
+          if (googleAccount != null) {
+            // Convert Google credentials to Firebase credentials
+            final GoogleSignInAuthentication googleAuth = await googleAccount.authentication;
+            final credential = GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            );
+            
+            // Sign in to Firebase
+            await _auth.signInWithCredential(credential);
+            
+            if (!mounted) return;
+            
+            // Navigate to home page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomePage()),
+            );
+            return;
+          }
+        } catch (e) {
+          print("Error during silent Google sign-in: $e");
+          // Clear stored preferences if silent sign-in fails
+          await prefs.clear();
+        }
+      }
     } catch (e) {
-      print("Error during initial login check: $e");
+      print("Error checking login status: $e");
     } finally {
       if (mounted) {
         setState(() {
