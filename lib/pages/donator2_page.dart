@@ -123,7 +123,7 @@ class _Donator2PageState extends State<Donator2Page> {
           .doc(widget.userId)
           .get();
 
-      if (userSnapshot.exists) {
+      if (userSnapshot.exists && mounted) {
         setState(() {
           profilePicUrl = userSnapshot.get('image') ?? '';
           userName = userSnapshot.get('name') ?? '';
@@ -199,10 +199,12 @@ class _Donator2PageState extends State<Donator2Page> {
   }
 
   Future<bool> verifyReceipt(File imageFile) async {
-    setState(() {
-      _isVerifyingReceipt = true;
-      _receiptVerificationError = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isVerifyingReceipt = true;
+        _receiptVerificationError = null;
+      });
+    }
 
     try {
       final inputImage = InputImage.fromFile(imageFile);
@@ -213,9 +215,11 @@ class _Donator2PageState extends State<Donator2Page> {
       // Get patterns for selected payment method
       final methodPatterns = paymentMethodPatterns[selectedPayment];
       if (methodPatterns == null) {
-        setState(() {
-          _receiptVerificationError = 'Unsupported payment method';
-        });
+        if (mounted) {
+          setState(() {
+            _receiptVerificationError = 'Unsupported payment method';
+          });
+        }
         return false;
       }
 
@@ -226,9 +230,11 @@ class _Donator2PageState extends State<Donator2Page> {
       print("Found keywords: ${keywords.where((keyword) => text.contains(keyword))}"); // Debug print
 
       if (!isGcashReceipt) {
-        setState(() {
-          _receiptVerificationError = 'This doesn\'t appear to be a valid GCash receipt. Please upload a GCash receipt.';
-        });
+        if (mounted) {
+          setState(() {
+            _receiptVerificationError = 'This doesn\'t appear to be a valid GCash receipt. Please upload a GCash receipt.';
+          });
+        }
         return false;
       }
 
@@ -256,7 +262,7 @@ class _Donator2PageState extends State<Donator2Page> {
       bool hasMatchingAmount = foundAmounts.any((amount) => 
           (amount - enteredAmount).abs() < 0.01);
 
-      if (!hasMatchingAmount) {
+      if (!hasMatchingAmount && mounted) {
         setState(() {
           _receiptVerificationError = 'The amount entered (₱${enteredAmount.toStringAsFixed(2)}) doesn\'t match the amount in the receipt.';
         });
@@ -266,14 +272,18 @@ class _Donator2PageState extends State<Donator2Page> {
       return true;
     } catch (e) {
       print("Error verifying receipt: $e");
-      setState(() {
-        _receiptVerificationError = 'Error verifying receipt. Please try again.';
-      });
+      if (mounted) {
+        setState(() {
+          _receiptVerificationError = 'Error verifying receipt. Please try again.';
+        });
+      }
       return false;
     } finally {
-      setState(() {
-        _isVerifyingReceipt = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isVerifyingReceipt = false;
+        });
+      }
     }
   }
 
@@ -507,8 +517,12 @@ class _Donator2PageState extends State<Donator2Page> {
 
   @override
   void dispose() {
-    _textRecognizer.close();
     super.dispose();
+    _textRecognizer.close();
+    nameController.dispose();
+    numberController.dispose();
+    amountController.dispose();
+    additionalInfoController.dispose();
   }
 
   @override
