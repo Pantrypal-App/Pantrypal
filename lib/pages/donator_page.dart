@@ -20,6 +20,7 @@ class _DonatorPageState extends State<DonatorPage> {
   final TextEditingController addressController = TextEditingController();
   final TextEditingController additionalInfoController =
       TextEditingController();
+  final TextEditingController otherDonationController = TextEditingController();
   LatLng currentLocation = LatLng(14.1084, 121.1416); // Default location
   MapController mapController = MapController();
 
@@ -44,6 +45,7 @@ class _DonatorPageState extends State<DonatorPage> {
   bool donateMedicine = false;
   bool donateClothes = false;
   bool donateAnimalFood = false;
+  bool donateOthers = false;
 
   @override
   void initState() {
@@ -110,9 +112,17 @@ class _DonatorPageState extends State<DonatorPage> {
     }
 
     // At least one item should be selected
-    if (!donateFood && !donateMedicine && !donateClothes && !donateAnimalFood) {
+    if (!donateFood && !donateMedicine && !donateClothes && !donateAnimalFood && !donateOthers) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please select at least one item to donate.')),
+      );
+      return;
+    }
+
+    // Check if Others is selected but no specification is provided
+    if (donateOthers && otherDonationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please specify what other items you want to donate.')),
       );
       return;
     }
@@ -122,6 +132,7 @@ class _DonatorPageState extends State<DonatorPage> {
     if (donateMedicine) donatedItems.add('Medicine');
     if (donateClothes) donatedItems.add('Clothes');
     if (donateAnimalFood) donatedItems.add('Animal Food');
+    if (donateOthers) donatedItems.add('Others: ${otherDonationController.text.trim()}');
 
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -168,12 +179,14 @@ class _DonatorPageState extends State<DonatorPage> {
         contactController.clear();
         addressController.clear();
         additionalInfoController.clear();
+        otherDonationController.clear();
         selectedCity = null;
         isOtherSelected = false;
         donateFood = false;
         donateMedicine = false;
         donateClothes = false;
         donateAnimalFood = false;
+        donateOthers = false;
       });
 
       // Navigate back to home page
@@ -316,7 +329,21 @@ class _DonatorPageState extends State<DonatorPage> {
                 onChanged: (val) =>
                     setState(() => donateAnimalFood = val ?? false),
               ),
-
+              CheckboxListTile(
+                title: Text('Others'),
+                value: donateOthers,
+                onChanged: (val) =>
+                    setState(() => donateOthers = val ?? false),
+              ),
+              if (donateOthers)
+                TextField(
+                  controller: otherDonationController,
+                  decoration: InputDecoration(
+                    labelText: 'Specify other donation items',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              SizedBox(height: 12),
               TextField(
                 controller: additionalInfoController,
                 decoration: InputDecoration(
