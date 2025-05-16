@@ -1,6 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class DonateCoinsPage extends StatelessWidget {
+class DonateCoinsPage extends StatefulWidget {
+  @override
+  _DonateCoinsPageState createState() => _DonateCoinsPageState();
+}
+
+class _DonateCoinsPageState extends State<DonateCoinsPage> {
+  int coinBalance = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoinBalance();
+  }
+
+  Future<void> _loadCoinBalance() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      coinBalance = prefs.getInt('coinBalance') ?? 0;
+    });
+  }
+
+  Future<void> _donateCoin(int coins, int amount) async {
+    if (coinBalance < coins) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Not enough coins! You need $coins coins.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      coinBalance -= coins;
+    });
+    await prefs.setInt('coinBalance', coinBalance);
+
+    // Save donation history
+    List<String> donationHistory = prefs.getStringList('donationHistory') ?? [];
+    final now = DateTime.now();
+    donationHistory.add('${now.toIso8601String()},₱$amount.00,$coins');
+    await prefs.setStringList('donationHistory', donationHistory);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Successfully donated ₱$amount.00! Thank you for your generosity!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +80,7 @@ class DonateCoinsPage extends StatelessWidget {
                     Icon(Icons.monetization_on, color: Colors.white, size: 18),
                     SizedBox(width: 5),
                     Text(
-                      "Your Coins 150",
+                      "Your Coins: $coinBalance",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -58,8 +110,7 @@ class DonateCoinsPage extends StatelessWidget {
                 children: [
                   donationTile(500, 50, Colors.brown, "lib/images/pig 2.png"),
                   donationTile(1000, 100, Colors.green, "lib/images/pig 2.png"),
-                  donationTile(
-                      2500, 250, Colors.purple, "lib/images/pig 2.png"),
+                  donationTile(2500, 250, Colors.purple, "lib/images/pig 2.png"),
                   donationTile(5000, 500, Colors.red, "lib/images/pig 2.png"),
                 ],
               ),
@@ -80,22 +131,19 @@ class DonateCoinsPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Hexagon Clip for Image
           ClipPath(
             clipper: HexagonClipper(),
             child: Container(
               color: bgColor,
-              padding: EdgeInsets.all(4), // 🔹 Reduce padding
-              width: 55, // Increase width
-              height: 55, // Increase height
-              child: Image.asset(pigImage,
-                  fit: BoxFit.contain), // 🔹 Prevent cropping
+              padding: EdgeInsets.all(4),
+              width: 55,
+              height: 55,
+              child: Image.asset(pigImage, fit: BoxFit.contain),
             ),
           ),
 
           SizedBox(width: 10),
 
-          // Expanded Text to Prevent Overflow
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,19 +156,17 @@ class DonateCoinsPage extends StatelessWidget {
                 Text(
                   "This amount of coins will automatically convert into Peso when you donate it.",
                   style: TextStyle(color: Colors.grey, fontSize: 10),
-                  maxLines: 4, // 🔹 Allow text to take two lines
-                  overflow:
-                      TextOverflow.ellipsis, // 🔹 Add "..." if it overflows
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
 
-          // Donate Button with Fixed Width
           SizedBox(
             width: 90,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _donateCoin(coins, amount),
               child: Text("Donate"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromARGB(93, 0, 255, 68),

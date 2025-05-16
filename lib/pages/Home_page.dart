@@ -14,6 +14,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'donationbreakdown.dart';
 import 'gettoknowus.dart';
+import 'view_all_articles.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -39,6 +40,11 @@ class _HomePageState extends State<HomePage> {
   double xPos = 20; // Initial X position
   double yPos = 100;
   bool showRewardIcon = true;
+  Timer? rewardTimer;
+  final String apiKey = '6fcadc69ffdb20610a2c118ab14c5f50';
+  List<dynamic> articles = [];
+  bool isLoading = true;
+  bool hasError = false;
 
   final List<TabItem> items = [
     TabItem(icon: Icons.home, title: 'Home'),
@@ -47,6 +53,74 @@ class _HomePageState extends State<HomePage> {
     TabItem(icon: Icons.notifications, title: 'Notification'),
     TabItem(icon: Icons.person, title: 'You'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNews();
+  }
+
+  @override
+  void dispose() {
+    rewardTimer?.cancel();
+    super.dispose();
+  }
+
+  void _hideRewardIcon() {
+    setState(() {
+      showRewardIcon = false;
+    });
+    
+    // Cancel existing timer if any
+    rewardTimer?.cancel();
+    
+    // Timer to show them again after 1 minute
+    rewardTimer = Timer(Duration(minutes: 1), () {
+      if (mounted) {
+        setState(() {
+          showRewardIcon = true;
+        });
+      }
+    });
+  }
+
+  Future<void> fetchNews() async {
+    try {
+      final query = 'food OR hunger OR health OR disaster';
+      final url = Uri.parse(
+          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=$apiKey');
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final rawArticles = data['articles'] ?? [];
+
+        final filteredArticles = rawArticles.where((article) {
+          final dateStr = article['publishedAt'] ?? '';
+          if (dateStr.isEmpty) return false;
+
+          final pubDate = DateTime.tryParse(dateStr);
+          if (pubDate == null) return false;
+
+          return pubDate.year >= 2024 && pubDate.year <= 2025;
+        }).toList();
+
+        setState(() {
+          articles = filteredArticles.isNotEmpty ? filteredArticles : rawArticles;
+          isLoading = false;
+          hasError = false;
+        });
+      } else {
+        throw Exception('Failed to load news: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,19 +204,7 @@ class _HomePageState extends State<HomePage> {
                       right: 0,
                       top: 0,
                       child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            showRewardIcon = false; // Hide both elements
-                          });
-
-                          // Timer to show them again after 1 minute
-                          Timer(Duration(minutes: 1), () {
-                            setState(() {
-                              showRewardIcon =
-                                  true; // Show reward icon & X button
-                            });
-                          });
-                        },
+                        onTap: _hideRewardIcon,
                         child: CircleAvatar(
                           radius: 12,
                           backgroundColor: Colors.black54,
@@ -215,7 +277,6 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
   List<dynamic> articles = [];
   bool isLoading = true;
   bool hasError = false;
-
   final String apiKey = '6fcadc69ffdb20610a2c118ab14c5f50';
 
   @override
@@ -230,15 +291,11 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
       final url = Uri.parse(
           'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=$apiKey');
 
-      print('Fetching news from URL: $url');
       final response = await http.get(url);
-      print('Response status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final rawArticles = data['articles'] ?? [];
-        print('Found ${rawArticles.length} articles');
 
         final filteredArticles = rawArticles.where((article) {
           final dateStr = article['publishedAt'] ?? '';
@@ -256,12 +313,9 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
           hasError = false;
         });
       } else {
-        print('API Error: Status code ${response.statusCode}');
-        print('Error response: ${response.body}');
         throw Exception('Failed to load news: ${response.statusCode}');
       }
     } catch (e) {
-      print("Error fetching news: $e");
       setState(() {
         hasError = true;
         isLoading = false;
@@ -284,7 +338,12 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               TextButton(
-                onPressed: () {}, // Optional navigation
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ViewAllArticlesPage()),
+                  );
+                },
                 child: Text("See all", style: TextStyle(color: Colors.blue)),
               ),
             ],
@@ -306,128 +365,95 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
                           itemCount: articles.length,
                           itemBuilder: (context, index) {
                             final article = articles[index];
-
-                            // Ensure you pass the article URL (if available in the API response)
                             final articleUrl = article['url'] ?? '';
-
-                            ''; // Assuming 'link' contains the article URL
-
-                            return GoalCard(
-                              title: article['title'] ?? 'No title',
-                              description:
-                                  article['description'] ?? 'No description',
-                              imagePath: article['image'] != null &&
-                                      article['image'].isNotEmpty
-                                  ? article['image']
-                                  : 'https://via.placeholder.com/300x160.png?text=No+Image',
-                              articleUrl:
-                                  articleUrl, // Pass the article URL here
+                            return _buildArticleCard(
+                              article['title'] ?? 'No title',
+                              article['description'] ?? 'No description',
+                              article['image'] ?? 'https://via.placeholder.com/300x160.png?text=No+Image',
+                              articleUrl,
                             );
                           },
-                        )),
+                        ),
+          ),
         ],
       ),
     );
   }
-}
 
-class GoalCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final String imagePath;
-  final String articleUrl; // Add article URL
-
-  GoalCard({
-    required this.title,
-    required this.description,
-    required this.imagePath,
-    required this.articleUrl, // Initialize article URL
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 300,
-      height: 320,
-      margin: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey, blurRadius: 5)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 160,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(10),
-                topRight: Radius.circular(10),
-              ),
-              image: DecorationImage(
-                image: imagePath.startsWith('http')
-                    ? NetworkImage(imagePath)
-                    : AssetImage(imagePath) as ImageProvider,
-                fit: BoxFit.cover,
-              ),
+  Widget _buildArticleCard(String title, String description, String imageUrl, String articleUrl) {
+    return Card(
+      margin: EdgeInsets.only(right: 16),
+      child: Container(
+        width: 300,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                Image.network(
+                  imageUrl,
+                  height: 160,
+                  width: 300,
+                  fit: BoxFit.cover,
+                ),
+              ],
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 5),
-                  Expanded(
-                    child: Text(
-                      description,
-                      style: TextStyle(fontSize: 14, color: Colors.black54),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 5),
+                    Expanded(
+                      child: Text(
+                        description,
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ReadMorePage(articleUrl: articleUrl),
-                            ),
-                          );
-                        },
-                        child: Text('Read More',
-                            style: TextStyle(color: Colors.blue)),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ProcessPage()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(93, 0, 255, 68),
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                    SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ReadMorePage(articleUrl: articleUrl),
+                              ),
+                            );
+                          },
+                          child: Text('Read More',
+                              style: TextStyle(color: Colors.blue)),
                         ),
-                        child: Text("Donate"),
-                      ),
-                    ],
-                  ),
-                ],
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ProcessPage()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(93, 0, 255, 68),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text("Donate"),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

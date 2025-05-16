@@ -37,7 +37,7 @@ class _DonationPageState extends State<DonationPage> {
 
   // Fetch news from the GNews API
   Future<void> fetchNews() async {
-    final String apiKey = '6fcadc69ffdb20610a2c118ab14c5f50';
+    final String apiKey = 'bb76d874b282d359358fdad4110607f9';
     final ongoingUrl =
         'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
     final loveUrl = 'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
