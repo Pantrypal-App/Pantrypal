@@ -6,6 +6,7 @@ import 'register_page.dart';
 import 'package:pantrypal/pages/Home_page.dart';
 import 'forgot_password_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,14 +15,59 @@ class LoginPage extends StatefulWidget {
   _LoginPageState createState() => _LoginPageState();
 }
 
-Future<void> checkLoginStatus() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-  if (isLoggedIn) {
-    // Navigate to home page
-  } else {
-    // Navigate to login page
+Future<void> checkLoginStatus(BuildContext context) async {
+  try {
+    // First check if Firebase has a cached user session
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    
+    if (currentUser != null) {
+      // Firebase says user is already logged in, redirect to home
+      print("User already signed in: ${currentUser.email}");
+      
+      // Update SharedPreferences to match Firebase state
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      
+      // No need to refresh the token or reauth - Firebase handles token refresh automatically
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+      return;
+    }
+    
+    // If no active Firebase session, check SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    
+    if (isLoggedIn) {
+      // User was previously logged in but Firebase session expired
+      // This can happen after app updates or after long periods
+      
+      // If they last used Google sign-in, we don't want to force them to sign in manually
+      // Firebase will attempt to refresh the token silently
+      
+      // Wait briefly to see if Firebase auto-restores the session
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Check again if Firebase auto-restored the session
+      currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Session was restored automatically
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage()),
+        );
+      } else {
+        // Force the user to sign in again - their session truly expired
+        // This is expected behavior when user explicitly logged out
+        await prefs.setBool('isLoggedIn', false);
+      }
+    }
+  } catch (e) {
+    print("Error checking login status: $e");
+    // Stay on login page if there's any error
   }
 }
 
@@ -35,38 +81,100 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   String? emailError;
   String? passwordError;
+  bool _isLoading = false;
+  bool _isCheckingLogin = true; // Add flag to track initial login check
 
-  // Sign out the user from Google and Firebase
-  Future<void> signOutGoogle() async {
-    await _googleSignIn.signOut();
-    await FirebaseAuth.instance.signOut();
-    print("User signed out from Google and Firebase.");
+  @override
+  void initState() {
+    super.initState();
+    // Check login status when the page initializes
+    _checkPreviousLogin();
+  }
+  
+  Future<void> _checkPreviousLogin() async {
+    setState(() {
+      _isCheckingLogin = true;
+    });
+    
+    try {
+      await checkLoginStatus(context);
+    } catch (e) {
+      print("Error during initial login check: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingLogin = false;
+        });
+      }
+    }
   }
 
   Future<User?> signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      // Sign out first to ensure a fresh login
-      await signOutGoogle();
-
+      // Begin Google sign-in flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // User canceled the sign-in
+      if (googleUser == null) {
+        // User canceled the sign-in
+        setState(() {
+          _isLoading = false;
+        });
+        return null;
+      }
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      // Obtain auth details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Create Firebase credential
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
+      // Sign in with Firebase
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
       final User? user = userCredential.user;
 
-      if (user == null) return null;
+      if (user != null) {
+        // Save user data in Firestore if it doesn't already exist
+        await _saveUserToFirestore(user);
+        
+        // Save login state with provider type so we know they used Google
+        await _saveLoginState(isGoogleSignIn: true);
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Google Sign-In Successful!"),
+          backgroundColor: Colors.green,
+        ));
+      }
 
-      // Save user data in Firestore if it doesn't already exist
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      return user;
+    } catch (e, stackTrace) {
+      print("Google Sign-In Error: $e");
+      print("Stack trace: $stackTrace");
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to sign in with Google. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      
+      return null;
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveUserToFirestore(User user) async {
+    try {
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final userDoc = await userRef.get();
 
       if (!userDoc.exists) {
@@ -74,15 +182,37 @@ class _LoginPageState extends State<LoginPage> {
           'email': user.email,
           'name': user.displayName,
           'profilePic': user.photoURL,
+          'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+      } else {
+        // Update last login timestamp
+        await userRef.update({
+          'lastLogin': FieldValue.serverTimestamp(),
+        });
       }
+    } catch (e) {
+      print("Error saving user data: $e");
+      // Continue with the login process even if Firestore update fails
+    }
+  }
 
-      // Automatically sign in the user if everything is successful
-      return user;
-    } catch (e, stackTrace) {
-      print("Google Sign-In Error: $e");
-      print("Stack trace: $stackTrace");
-      return null;
+  Future<void> _saveLoginState({bool isGoogleSignIn = false}) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      
+      // Track if the user logged in with Google
+      if (isGoogleSignIn) {
+        await prefs.setBool('usedGoogleSignIn', true);
+      }
+      
+      // Also store the user ID for additional verification
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        await prefs.setString('userId', currentUser.uid);
+      }
+    } catch (e) {
+      print("Error saving login state: $e");
     }
   }
 
@@ -90,9 +220,13 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       emailError = null;
       passwordError = null;
+      _isLoading = true;
     });
 
     if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = false;
+      });
       return; // Stop if validation fails
     }
 
@@ -102,8 +236,8 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+      // Store login state with email provider specified
+      await _saveLoginState(isGoogleSignIn: false);
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Login Successful!"),
@@ -132,6 +266,10 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         passwordError = "Something went wrong. Please try again.";
       });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -148,8 +286,17 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          Center(
-            child: SingleChildScrollView(
+          // Show a loading screen while checking login status
+          if (_isCheckingLogin)
+            Container(
+              color: Colors.white.withOpacity(0.7),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+          if (!_isCheckingLogin)
+            Center(
+              child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Form(
                 key: _formKey,
@@ -169,6 +316,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Email Field
                     TextFormField(
                       controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email),
                         labelText: "Email",
@@ -243,7 +391,7 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: login,
+                        onPressed: _isLoading ? null : login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           side: const BorderSide(color: Colors.grey),
@@ -251,6 +399,8 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           elevation: 3,
+                          // Dim the button when loading
+                          foregroundColor: _isLoading ? Colors.grey[400] : null,
                         ),
                         child: const Text(
                           "Sign In",
@@ -269,42 +419,33 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await signOutGoogle(); // Sign out before logging in again
-                          User? user = await signInWithGoogle();
-                          if (user != null) {
-                            SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            await prefs.setBool('isLoggedIn', true);
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => HomePage()),
-                            );
-                          } else {
-                            // Handle failed sign-in
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    "Google Sign-In failed! Please try again."),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                User? user = await signInWithGoogle();
+                                if (user != null) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => HomePage()),
+                                  );
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           side: const BorderSide(color: Colors.grey),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
+                          // Dim the button when loading
+                          foregroundColor: _isLoading ? Colors.grey[400] : null,
                         ),
                         icon: Image.asset(
                           "lib/images/images-removebg-preview.png",
                           height: 20,
                         ),
-                        label: const Text("Sign In With Google",
-                            style: TextStyle(color: Colors.black)),
+                        label: const Text("Sign In With Google", 
+                          style: TextStyle(color: Colors.black)),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -337,5 +478,13 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Clean up the controllers when the widget is disposed
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 }

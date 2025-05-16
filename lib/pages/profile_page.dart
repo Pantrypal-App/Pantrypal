@@ -19,6 +19,7 @@ import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'aboutus_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 
 class ProfilePage extends StatefulWidget {
@@ -459,16 +460,37 @@ class _ProfilePageState extends State<ProfilePage> {
                               color: Colors.red, fontWeight: FontWeight.bold)),
                       leading: const Icon(Icons.logout, color: Colors.red),
                       onTap: () async {
-                        await _auth.signOut();
-                        final prefs = await SharedPreferences.getInstance();
-                        prefs.remove(
-                            'isLoggedIn'); // Remove the stored login state
-
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => LoginPage()),
-                          (route) => false,
-                        );
+                        try {
+                          // Sign out from Google
+                          final GoogleSignIn googleSignIn = GoogleSignIn();
+                          await googleSignIn.signOut();
+                          
+                          // Sign out from Firebase
+                          await _auth.signOut();
+                          
+                          // Clear all relevant SharedPreferences
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.clear(); // Clear all stored preferences
+                          
+                          if (!mounted) return;
+                          
+                          // Navigate to login page and clear all previous routes
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => LoginPage()),
+                            (route) => false,
+                          );
+                        } catch (e) {
+                          print("Error during logout: $e");
+                          if (!mounted) return;
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Error logging out. Please try again."),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       },
                     ),
                   ),
