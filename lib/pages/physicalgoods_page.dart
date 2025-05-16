@@ -16,7 +16,7 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   bool isLoading = true;
   bool hasError = false;
 
-  final String apiKey = 'a4b2de65ff5e632d3361fc3404f2f6a4';
+  final String apiKey = '81bb67c48a0df88aa315988f1ac6651e';
 
   String ongoingUrl = '';
   String loveUrl = '';
@@ -83,6 +83,7 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
           'title': article['title']?.toString() ?? 'No Title',
           'subtitle': article['description']?.toString() ?? 'No Description',
           'count': '${(1000 + article['title'].hashCode % 3000)} donations',
+          'source': article['source']?['name']?.toString() ?? 'Unknown Source',
         };
       }).toList();
 
@@ -161,7 +162,7 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   SizedBox(height: 4),
                   Text(
-                    'As of year 2024, our donations were on the rise. Thanks to your generosity! Let’s keep this momentum going.',
+                    'As of year 2024, our donations were on the rise. Thanks to your generosity! Let\'s keep this momentum going.',
                     textAlign: TextAlign.start,
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
@@ -211,6 +212,11 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   }
 
   Widget _donationItem(String title, String subtitle, String count) {
+    final Map<String, String> donation = filteredDonations.firstWhere(
+      (d) => d['title'] == title && d['subtitle'] == subtitle,
+      orElse: () => {},
+    );
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 6),
       padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -227,8 +233,7 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
         children: [
           Expanded(
             child: Padding(
-              padding:
-                  const EdgeInsets.only(right: 12), // ✅ spacing from button
+              padding: const EdgeInsets.only(right: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -255,7 +260,12 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => DonatorPage(
-
+                    articleData: {
+                      'title': title,
+                      'subtitle': subtitle,
+                      'count': count,
+                      'source': donation['source'] ?? 'Unknown Source',
+                    },
                   ),
                 ),
               );

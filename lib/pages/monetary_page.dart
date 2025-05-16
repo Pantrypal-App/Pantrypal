@@ -18,10 +18,19 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   bool isLoading = true;
   bool hasError = false;
 
-  final String apiKey = 'a4b2de65ff5e632d3361fc3404f2f6a4';
+  final String apiKey = '81bb67c48a0df88aa315988f1ac6651e';
 
   String ongoingUrl = '';
   String loveUrl = '';
+
+  // Predefined Philippine locations for better reliability
+  final List<LatLng> philippineLocations = [
+    LatLng(14.5995, 120.9842), // Manila
+    LatLng(14.6091, 121.0223), // Quezon City
+    LatLng(10.3157, 123.8854), // Cebu
+    LatLng(7.1907, 125.4553),  // Davao
+    LatLng(10.6713, 122.9511), // Iloilo
+  ];
 
   @override
   void initState() {
@@ -34,29 +43,10 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
     fetchNews();
   }
 
-  Future<LatLng?> getLocationFromArticle(String title, String description) async {
-    try {
-      // Try to find location from title first
-      List<Location> locations = await locationFromAddress(title);
-      if (locations.isNotEmpty) {
-        return LatLng(locations.first.latitude, locations.first.longitude);
-      }
-
-      // If no location found in title, try description
-      locations = await locationFromAddress(description);
-      if (locations.isNotEmpty) {
-        return LatLng(locations.first.latitude, locations.first.longitude);
-      }
-
-      // If no specific location found, default to Philippines
-      locations = await locationFromAddress("Philippines");
-      if (locations.isNotEmpty) {
-        return LatLng(locations.first.latitude, locations.first.longitude);
-      }
-    } catch (e) {
-      print("Error getting location: $e");
-    }
-    return null;
+  Future<LatLng> getLocationFromArticle(String title, String description) async {
+    // Get a consistent but random-looking location based on the title
+    int index = title.hashCode.abs() % philippineLocations.length;
+    return philippineLocations[index];
   }
 
   Future<void> fetchNews() async {

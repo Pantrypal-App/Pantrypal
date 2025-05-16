@@ -62,7 +62,10 @@ class _DonatorPageState extends State<DonatorPage> {
     if (addressController.text.isEmpty) return;
 
     try {
-      List<Location> locations = await locationFromAddress(addressController.text);
+      // Add ", Philippines" to make the search more accurate
+      String searchAddress = "${addressController.text}, Philippines";
+      List<Location> locations = await locationFromAddress(searchAddress);
+      
       if (locations.isNotEmpty) {
         setState(() {
           currentLocation = LatLng(locations.first.latitude, locations.first.longitude);
@@ -71,6 +74,7 @@ class _DonatorPageState extends State<DonatorPage> {
       }
     } catch (e) {
       print('Error getting location from address: $e');
+      // If geocoding fails, keep the current location
     }
   }
 

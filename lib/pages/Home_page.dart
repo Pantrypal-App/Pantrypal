@@ -216,8 +216,7 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
   bool isLoading = true;
   bool hasError = false;
 
-  final String apiKey =
-      'a4b2de65ff5e632d3361fc3404f2f6a4'; // Replace with your NewsData.io key
+  final String apiKey = '6fcadc69ffdb20610a2c118ab14c5f50';
 
   @override
   void initState() {
@@ -229,14 +228,17 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
     try {
       final query = 'food OR hunger OR health OR disaster';
       final url = Uri.parse(
-          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=a4b2de65ff5e632d3361fc3404f2f6a4');
+          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=10&token=$apiKey');
 
+      print('Fetching news from URL: $url');
       final response = await http.get(url);
+      print('Response status code: ${response.statusCode}');
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final rawArticles = data['articles'] ?? [];
+        print('Found ${rawArticles.length} articles');
 
         final filteredArticles = rawArticles.where((article) {
           final dateStr = article['publishedAt'] ?? '';
@@ -249,15 +251,17 @@ class _FeaturedGoalsSectionState extends State<FeaturedGoalsSection> {
         }).toList();
 
         setState(() {
-          articles =
-              filteredArticles.isNotEmpty ? filteredArticles : rawArticles;
+          articles = filteredArticles.isNotEmpty ? filteredArticles : rawArticles;
           isLoading = false;
+          hasError = false;
         });
       } else {
-        throw Exception('Failed to load news');
+        print('API Error: Status code ${response.statusCode}');
+        print('Error response: ${response.body}');
+        throw Exception('Failed to load news: ${response.statusCode}');
       }
     } catch (e) {
-      print("Error: $e");
+      print("Error fetching news: $e");
       setState(() {
         hasError = true;
         isLoading = false;
