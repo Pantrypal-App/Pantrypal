@@ -13,8 +13,13 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 class Donator2Page extends StatefulWidget {
   final String userId;
   final String name;
+  final Map<String, dynamic>? articleData;
 
-  Donator2Page({required this.userId, required this.name});
+  Donator2Page({
+    required this.userId, 
+    required this.name,
+    this.articleData,
+  });
 
   @override
   _Donator2PageState createState() => _Donator2PageState();
@@ -538,6 +543,50 @@ class _Donator2PageState extends State<Donator2Page> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.articleData != null) Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Donating to help with:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    widget.articleData!['title'] ?? '',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    widget.articleData!['subtitle'] ?? '',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Source: ${widget.articleData!['source'] ?? 'Unknown'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
             _buildTextField('Name',
                 controller: nameController, readOnly: isNameLocked),
             _buildTextField(getPaymentLabel(), controller: numberController),
@@ -592,7 +641,6 @@ class _Donator2PageState extends State<Donator2Page> {
                   Text(userName,
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   SizedBox(height: 10),
-                  Text('Total Donations: \$${totalAmount.toStringAsFixed(2)}'),
                 ],
               ),
             ),

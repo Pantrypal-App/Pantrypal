@@ -3,6 +3,8 @@ import 'donator2_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 
 class MonetaryDonationPage extends StatefulWidget {
   @override
@@ -11,8 +13,8 @@ class MonetaryDonationPage extends StatefulWidget {
 
 class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   TextEditingController searchController = TextEditingController();
-  List<Map<String, String>> donations = [];
-  List<Map<String, String>> filteredDonations = [];
+  List<Map<String, dynamic>> donations = [];
+  List<Map<String, dynamic>> filteredDonations = [];
   bool isLoading = true;
   bool hasError = false;
 
@@ -32,6 +34,31 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
     fetchNews();
   }
 
+  Future<LatLng?> getLocationFromArticle(String title, String description) async {
+    try {
+      // Try to find location from title first
+      List<Location> locations = await locationFromAddress(title);
+      if (locations.isNotEmpty) {
+        return LatLng(locations.first.latitude, locations.first.longitude);
+      }
+
+      // If no location found in title, try description
+      locations = await locationFromAddress(description);
+      if (locations.isNotEmpty) {
+        return LatLng(locations.first.latitude, locations.first.longitude);
+      }
+
+      // If no specific location found, default to Philippines
+      locations = await locationFromAddress("Philippines");
+      if (locations.isNotEmpty) {
+        return LatLng(locations.first.latitude, locations.first.longitude);
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+    }
+    return null;
+  }
+
   Future<void> fetchNews() async {
     try {
       final query = 'food OR hunger OR health OR disaster';
@@ -44,8 +71,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
       final loveFuture = http.get(Uri.parse(loveUrl));
 
       // Wait for all of them to complete
-      final responses =
-          await Future.wait([searchFuture, ongoingFuture, loveFuture]);
+      final responses = await Future.wait([searchFuture, ongoingFuture, loveFuture]);
 
       List<dynamic> allArticles = [];
 
@@ -80,14 +106,22 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
         return pubDate.year >= 2024 && pubDate.year <= 2025;
       }).toList();
 
-      final List<Map<String, String>> loadedDonations =
-          filteredArticles.map<Map<String, String>>((article) {
-        return {
-          'title': article['title']?.toString() ?? 'No Title',
-          'subtitle': article['description']?.toString() ?? 'No Description',
-          'count': '${(1000 + article['title'].hashCode % 3000)} donations',
-        };
-      }).toList();
+      final List<Map<String, dynamic>> loadedDonations = [];
+      
+      for (var article in filteredArticles) {
+        final title = article['title']?.toString() ?? 'No Title';
+        final description = article['description']?.toString() ?? 'No Description';
+        final location = await getLocationFromArticle(title, description);
+        
+        loadedDonations.add({
+          'title': title,
+          'subtitle': description,
+          'count': '${(1000 + title.hashCode % 3000)} donations',
+          'location': location,
+          'url': article['url'],
+          'source': article['source']?['name'] ?? 'Unknown Source',
+        });
+      }
 
       setState(() {
         donations = loadedDonations;
@@ -164,7 +198,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   SizedBox(height: 4),
                   Text(
-                    'As of year 2024, our donations were on the rise. Thanks to your generosity! Let’s keep this momentum going.',
+                    'As of year 2024, our donations were on the rise. Thanks to your generosity! Let\'s keep this momentum going.',
                     textAlign: TextAlign.start,
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
@@ -254,6 +288,11 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   }
 
   Widget _donationItem(String title, String subtitle, String count) {
+    final Map<String, dynamic> donation = filteredDonations.firstWhere(
+      (d) => d['title'] == title && d['subtitle'] == subtitle,
+      orElse: () => {},
+    );
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 6),
       padding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -270,8 +309,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
         children: [
           Expanded(
             child: Padding(
-              padding:
-                  const EdgeInsets.only(right: 12), // ✅ spacing from button
+              padding: const EdgeInsets.only(right: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -299,8 +337,14 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
                 MaterialPageRoute(
                   builder: (context) => Donator2Page(
                     userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                    name: FirebaseAuth.instance.currentUser?.displayName ??
-                        'Guest',
+                    name: FirebaseAuth.instance.currentUser?.displayName ?? 'Guest',
+                    articleData: {
+                      'title': title,
+                      'subtitle': subtitle,
+                      'count': count,
+                      'url': donation['url'],
+                      'source': donation['source'],
+                    },
                   ),
                 ),
               );
