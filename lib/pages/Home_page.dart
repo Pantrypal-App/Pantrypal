@@ -632,7 +632,7 @@ class InviteFriendsSection extends StatelessWidget {
 
               ElevatedButton(
                 onPressed: () {
-                  Share.share('Join me in fighting hunger! Download PantryPal: https://tinyurl.com/PantryPalApp');
+                  Share.share('Join me in fighting hunger! Download PantryPal: https://tinyurl.com/PantryPalApplication');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
