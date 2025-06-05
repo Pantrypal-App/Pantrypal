@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'barangay_details_page.dart';
 
 class TransactionListPage extends StatelessWidget {
   final String location;
@@ -6,16 +7,20 @@ class TransactionListPage extends StatelessWidget {
   TransactionListPage({required this.location});
 
   final List<Map<String, String>> transactions = [
-    {"name": "BARANGAY 1", "date": "JULY 10, 2024"},
-    {"name": "BARANGAY 2", "date": "AUGUST 07, 2024"},
-    {"name": "BARANGAY 3", "date": "SEPTEMBER 15, 2024"},
-    {"name": "BARANGAY 4", "date": "OCTOBER 20, 2024"},
-    {"name": "BARANGAY 5", "date": "NOVEMBER 30, 2024"},
-    {"name": "BARANGAY 6", "date": "DECEMBER 25, 2024"},
+    {"name": "BARANGAY 1", "date": "JULY 10, 2024", "location": "Sto. Tomas City, Batangas"},
+    {"name": "BARANGAY 2", "date": "AUGUST 07, 2024", "location": "Sto. Tomas City, Batangas"},
+    {"name": "BARANGAY 3", "date": "SEPTEMBER 15, 2024", "location": "Tanauan City, Batangas"},
+    {"name": "BARANGAY 4", "date": "OCTOBER 20, 2024", "location": "Calamba City, Laguna"},
+    {"name": "BARANGAY 5", "date": "NOVEMBER 30, 2024", "location": "Lapu-Lapu City, Cebu"},
+    {"name": "BARANGAY 6", "date": "DECEMBER 25, 2024", "location": "Lapu-Lapu City, Cebu"},
   ];
 
   @override
   Widget build(BuildContext context) {
+    final filteredTransactions = transactions
+        .where((t) => t["location"] == location)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
@@ -38,7 +43,7 @@ class TransactionListPage extends StatelessWidget {
           children: [
             Expanded(
               child: ListView.builder(
-                itemCount: transactions.length,
+                itemCount: filteredTransactions.length,
                 itemBuilder: (context, index) {
                   return Card(
                     shape: RoundedRectangleBorder(
@@ -54,14 +59,26 @@ class TransactionListPage extends StatelessWidget {
                             color: Colors.white),
                       ),
                       title: Text(
-                        transactions[index]["name"]!,
+                        filteredTransactions[index]["name"]!,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       subtitle: Text(
-                        transactions[index]["date"]!,
+                        filteredTransactions[index]["date"]!,
                         style: const TextStyle(color: Colors.grey),
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BarangayDetailsPage(
+                              barangayName: filteredTransactions[index]["name"]!,
+                              date: filteredTransactions[index]["date"]!,
+                              location: filteredTransactions[index]["location"]!,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
