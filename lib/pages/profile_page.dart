@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'AccountDetailsPage.dart';
 import 'donationlist_page.dart';
@@ -20,6 +22,7 @@ import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
 import 'aboutus_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:share_plus/share_plus.dart';
 
 
 class ProfilePage extends StatefulWidget {
@@ -442,7 +445,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 builder: (context) => FeedbackPage()),
                           );
                         }),
-                        _buildOption(Icons.share, "Share"),
+                        _buildOption(Icons.share, "Share", () {
+                          Share.share('Join me in fighting hunger! Download PantryPal: https://tinyurl.com/PantryPalApp');
+                        }),
                         _buildOption(Icons.group, "About us", () {
                           Navigator.push(
                             context,

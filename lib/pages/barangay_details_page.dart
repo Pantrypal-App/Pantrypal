@@ -128,11 +128,11 @@ class BarangayDetailsPage extends StatelessWidget {
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Total Donations', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text('Total Donation', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Item Donated', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text('Donator', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'profile_page.dart';
 import 'Notification_page.dart';
 import 'Donate_page.dart';
@@ -15,6 +16,8 @@ import 'package:http/http.dart' as http;
 import 'donationbreakdown.dart';
 import 'gettoknowus.dart';
 import 'view_all_articles.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
   runApp(PantryPalApp());
@@ -589,12 +592,11 @@ class InviteFriendsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0), // Adds spacing
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Center(
-        // Centers the box horizontally
         child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
-          height: 120, // Adjust as needed
+          height: 120,
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.blue[100],
@@ -603,12 +605,12 @@ class InviteFriendsSection extends StatelessWidget {
           child: Row(
             children: [
               Image.asset(
-                'lib/images/invite your friends.png', // Update this path as needed
-                width: 80, // Adjust image size
+                'lib/images/invite your friends.png',
+                width: 80,
                 height: 80,
                 fit: BoxFit.cover,
               ),
-              SizedBox(width: 10), // Add spacing
+              SizedBox(width: 10),
 
               Expanded(
                 child: Column(
@@ -617,8 +619,7 @@ class InviteFriendsSection extends StatelessWidget {
                   children: [
                     Text(
                       "Invite your friends",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 4),
                     Text(
@@ -630,7 +631,9 @@ class InviteFriendsSection extends StatelessWidget {
               ),
 
               ElevatedButton(
-                onPressed: () {}, // Add invite function
+                onPressed: () {
+                  Share.share('Join me in fighting hunger! Download PantryPal: https://tinyurl.com/PantryPalApp');
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
