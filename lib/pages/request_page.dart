@@ -29,7 +29,9 @@ class _RequestPageState extends State<RequestPage> {
 
   TextEditingController otherController = TextEditingController();
   TextEditingController nameController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
   TextEditingController addressController = TextEditingController();
+  TextEditingController amountController = TextEditingController();
   LatLng currentLocation = LatLng(14.1084, 121.1416); // Default location
   MapController mapController = MapController();
 
@@ -98,24 +100,61 @@ class _RequestPageState extends State<RequestPage> {
           donationTypes.add("OTHER: ${otherController.text}");
         }
 
-        if (nameController.text.isEmpty || addressController.text.isEmpty) {
+        // Validate required fields
+        if (nameController.text.isEmpty || 
+            addressController.text.isEmpty || 
+            descriptionController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Name and Address are required!"),
+            content: Text("All fields are required!"),
             backgroundColor: Colors.red,
           ));
           return;
         }
 
-        // Save request data
-        await FirebaseFirestore.instance.collection('requests').add({
+        // Validate amount for monetary requests
+        if (selectedDonations["MONEY"] == true && amountController.text.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Please specify the amount needed for monetary donation"),
+            backgroundColor: Colors.red,
+          ));
+          return;
+        }
+
+        // Determine if this is a monetary or physical request
+        bool isMonetaryRequest = donationTypes.contains("MONEY");
+        String requestType = isMonetaryRequest ? "monetary" : "physical";
+
+        // Get user data for the request
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        String userName = userDoc.get('name') ?? 'Anonymous';
+
+        // Create the request data
+        Map<String, dynamic> requestData = {
           'userId': user.uid,
-          'name': nameController.text,
-          'address': addressController.text,
+          'userName': userName,
+          'title': 'Request Donation', // Default title
+          'description': descriptionController.text,
+          'type': requestType,
           'donations': donationTypes,
+          'address': addressController.text,
           'latitude': currentLocation.latitude,
           'longitude': currentLocation.longitude,
           'timestamp': FieldValue.serverTimestamp(),
-        });
+          'donationCount': 0,
+        };
+
+        // Add amount field for monetary requests
+        if (isMonetaryRequest) {
+          double amount = double.tryParse(amountController.text) ?? 0.0;
+          requestData['amount'] = amount;
+        }
+
+        // Save request data
+        await FirebaseFirestore.instance.collection('requests').add(requestData);
 
         // Add notification
         await FirebaseFirestore.instance.collection('notifications').add({
@@ -138,6 +177,8 @@ class _RequestPageState extends State<RequestPage> {
           nameController.clear();
           addressController.clear();
           otherController.clear();
+          descriptionController.clear();
+          amountController.clear();
           selectedDonations.forEach((key, value) {
             selectedDonations[key] = false;
           });
@@ -241,6 +282,14 @@ class _RequestPageState extends State<RequestPage> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               _buildDonationSelection(),
+              if (selectedDonations["MONEY"] == true)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: _buildTextField("Amount Needed (₱)", 
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
               if (selectedDonations["OTHER"] == true)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -248,7 +297,14 @@ class _RequestPageState extends State<RequestPage> {
                       controller: otherController),
                 ),
               SizedBox(height: 16),
-              _buildTextField("Additional Information"),
+              Text("ADDITIONAL INFORMATION:",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              _buildTextField("Description", 
+                controller: descriptionController, 
+                maxLines: 3,
+                hintText: "Please provide any additional details about your request...",
+              ),
               SizedBox(height: 16),
               _buildButtons(),
             ],
@@ -271,11 +327,19 @@ class _RequestPageState extends State<RequestPage> {
     );
   }
 
-  Widget _buildTextField(String label, {TextEditingController? controller}) {
+  Widget _buildTextField(String label, {
+    TextEditingController? controller,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? hintText,
+  }) {
     return TextField(
       controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
+        hintText: hintText,
         border: OutlineInputBorder(),
       ),
     );
@@ -357,6 +421,8 @@ class _RequestPageState extends State<RequestPage> {
             nameController.clear();
             addressController.clear();
             otherController.clear();
+            descriptionController.clear();
+            amountController.clear();
             selectedDonations = {
               "MONEY": false,
               "CLOTHES": false,

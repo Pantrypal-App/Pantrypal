@@ -306,25 +306,26 @@ class _Donator2PageState extends State<Donator2Page> {
   @override
   void initState() {
     super.initState();
-    nameController.text = widget.name;
-    isNameLocked = true;
-    _fetchUserProfileData();
     _initializeLocation();
+    _fetchUserProfileData();
   }
 
   Future<void> _initializeLocation() async {
     if (widget.articleData != null) {
-      if (widget.articleData!['location'] != null) {
-        // If location is directly provided
-        final location = widget.articleData!['location'] as LatLng;
-        setState(() {
-          donationLocation = location;
-        });
+      if (widget.articleData!['isRequest'] == true) {
+        // For active requests, use the provided location
+        if (widget.articleData!['latitude'] != null && widget.articleData!['longitude'] != null) {
+          setState(() {
+            donationLocation = LatLng(
+              widget.articleData!['latitude'],
+              widget.articleData!['longitude']
+            );
+          });
+        }
       } else {
-        // Try to detect location from title and description
+        // For news articles, try to detect location from title and description
         String searchText = '${widget.articleData!['title']} ${widget.articleData!['subtitle']}';
         LatLng? detectedLocation = await detectLocationFromText(searchText);
-        
         setState(() {
           donationLocation = detectedLocation ?? defaultLocation;
         });
@@ -790,15 +791,17 @@ class _Donator2PageState extends State<Donator2Page> {
                     widget.articleData!['subtitle'] ?? '',
                     style: TextStyle(fontSize: 12),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Source: ${widget.articleData!['source'] ?? 'Unknown'}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey.shade700,
+                  if (widget.articleData!['isRequest'] != true) ...[
+                    SizedBox(height: 4),
+                    Text(
+                      'Source: ${widget.articleData!['source'] ?? 'Unknown'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -840,6 +843,18 @@ class _Donator2PageState extends State<Donator2Page> {
             SizedBox(height: 20),
             Text('The location for your donation:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
+            if (widget.articleData != null && widget.articleData!['isRequest'] == true && widget.articleData!['address'] != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0, bottom: 10.0),
+                child: Text(
+                  widget.articleData!['address'],
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
             SizedBox(height: 10),
             _buildMapView(),
             SizedBox(height: 20),
@@ -940,7 +955,7 @@ class _Donator2PageState extends State<Donator2Page> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (detectedLocationName.isNotEmpty)
+        if (detectedLocationName.isNotEmpty && widget.articleData != null && widget.articleData!['isRequest'] != true)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(

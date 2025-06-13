@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'donator2_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -15,8 +17,11 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   TextEditingController searchController = TextEditingController();
   List<Map<String, dynamic>> donations = [];
   List<Map<String, dynamic>> filteredDonations = [];
+  List<Map<String, dynamic>> requests = [];
+  List<Map<String, dynamic>> filteredRequests = [];
   bool isLoading = true;
   bool hasError = false;
+  StreamSubscription? _requestsSubscription;
 
   final String apiKey = '1d263f1b383b160fd54e77d76a89d077';
 
@@ -35,12 +40,71 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
   @override
   void initState() {
     super.initState();
-    ongoingUrl =
-        'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
-    loveUrl =
-        'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
-
+    ongoingUrl = 'https://gnews.io/api/v4/search?q=Philippines+hunger&token=$apiKey';
+    loveUrl = 'https://gnews.io/api/v4/search?q=Philippines+food+insecurity+hunger&token=$apiKey';
+    
     fetchNews();
+    _setupRequestsListener();
+  }
+
+  @override
+  void dispose() {
+    _requestsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRequestsListener() {
+    _requestsSubscription = FirebaseFirestore.instance
+        .collection('requests')
+        .where('type', isEqualTo: 'monetary')
+        .snapshots()
+        .listen((snapshot) {
+      final List<Map<String, dynamic>> loadedRequests = [];
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        loadedRequests.add({
+          'id': doc.id,
+          'title': data['title'] ?? 'No Title',
+          'subtitle': data['description'] ?? 'No Description',
+          'count': '${data['donationCount'] ?? 0} donations',
+          'isRequest': true,
+          'userId': data['userId'],
+          'userName': data['userName'] ?? 'Anonymous',
+          'timestamp': data['timestamp'],
+          'amount': data['amount'],
+          'address': data['address'] ?? '',
+          'latitude': data['latitude'] ?? 0.0,
+          'longitude': data['longitude'] ?? 0.0,
+        });
+      }
+
+      setState(() {
+        requests = loadedRequests;
+        filteredRequests = loadedRequests;
+        _updateFilteredContent(searchController.text);
+      });
+    }, onError: (error) {
+      print("Error fetching requests: $error");
+      setState(() {
+        hasError = true;
+      });
+    });
+  }
+
+  void _updateFilteredContent(String query) {
+    final lowerQuery = query.toLowerCase();
+    setState(() {
+      filteredDonations = donations.where((donation) =>
+          donation['title']!.toLowerCase().contains(lowerQuery)).toList();
+      
+      filteredRequests = requests.where((request) =>
+          request['title']!.toLowerCase().contains(lowerQuery)).toList();
+    });
+  }
+
+  void filterDonations(String query) {
+    _updateFilteredContent(query);
   }
 
   Future<LatLng> getLocationFromArticle(String title, String description) async {
@@ -125,15 +189,6 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
         isLoading = false;
       });
     }
-  }
-
-  void filterDonations(String query) {
-    setState(() {
-      filteredDonations = donations
-          .where((donation) =>
-              donation['title']!.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    });
   }
 
   @override
@@ -242,7 +297,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.white,
-                hintText: 'Search Here...',
+                hintText: 'Search donations and requests...',
                 hintStyle: TextStyle(color: Colors.grey),
                 prefixIcon: Icon(Icons.search, color: Colors.grey),
                 border: OutlineInputBorder(
@@ -256,23 +311,272 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
               Center(child: CircularProgressIndicator())
             else if (hasError)
               Center(
-                  child: Text("Failed to load news.",
+                  child: Text("Failed to load content.",
                       style: TextStyle(color: Colors.red)))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: filteredDonations.length,
-                itemBuilder: (context, index) {
-                  return _donationItem(
-                    filteredDonations[index]['title']!,
-                    filteredDonations[index]['subtitle']!,
-                    filteredDonations[index]['count']!,
-                  );
-                },
-              ),
+            else ...[
+              if (filteredRequests.isNotEmpty) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.volunteer_activism, color: Colors.orange.shade800),
+                      SizedBox(width: 8),
+                      Text(
+                        'Active Requests',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: filteredRequests.length,
+                    itemBuilder: (context, index) {
+                      return Column(
+                        children: [
+                          if (index > 0)
+                            Divider(height: 1, color: Colors.orange.shade200),
+                          _requestItem(
+                            filteredRequests[index]['title']!,
+                            filteredRequests[index]['subtitle']!,
+                            filteredRequests[index]['count']!,
+                            filteredRequests[index],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 24),
+              ],
+              if (filteredDonations.isNotEmpty) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.newspaper, color: Colors.blue.shade800),
+                      SizedBox(width: 8),
+                      Text(
+                        'News & Updates',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: filteredDonations.length,
+                  itemBuilder: (context, index) {
+                    return _donationItem(
+                      filteredDonations[index]['title']!,
+                      filteredDonations[index]['subtitle']!,
+                      filteredDonations[index]['count']!,
+                    );
+                  },
+                ),
+                SizedBox(height: 24),
+              ],
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _requestItem(String title, String subtitle, String count, Map<String, dynamic> request) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person, size: 12, color: Colors.orange.shade800),
+                            SizedBox(width: 2),
+                            Text(
+                              request['userName'] ?? 'Anonymous',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.orange.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.orange.shade900,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (request['amount'] != null) ...[
+                    SizedBox(height: 4),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.attach_money, size: 12, color: Colors.orange.shade800),
+                          SizedBox(width: 2),
+                          Text(
+                            'Amount: ₱${request['amount']}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange.shade800,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (request['address'] != null && request['address'].toString().isNotEmpty) ...[
+                    SizedBox(height: 4),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on, size: 12, color: Colors.orange.shade800),
+                          SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              'Location: ${request['address']}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.orange.shade800,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: 4),
+                  Text(
+                    count,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Donator2Page(
+                    articleData: {
+                      'title': title,
+                      'subtitle': subtitle,
+                      'count': count,
+                      'isRequest': true,
+                      'requestId': request['id'],
+                      'userId': request['userId'],
+                      'userName': request['userName'],
+                      'amount': request['amount'],
+                      'address': request['address'],
+                      'latitude': request['latitude'],
+                      'longitude': request['longitude'],
+                    },
+                    userId: request['userId'],
+                    name: request['userName'] ?? 'Anonymous',
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(93, 0, 255, 68),
+              foregroundColor: Colors.white,
+              elevation: 2,
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              minimumSize: Size(90, 36),
+            ),
+            child: Text(
+              'Donate',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -344,6 +648,7 @@ class _MonetaryDonationPageState extends State<MonetaryDonationPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
+              minimumSize: Size(90, 36),
             ),
             child: Text(
               'Donate',

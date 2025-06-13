@@ -51,6 +51,7 @@ class _DonatorPageState extends State<DonatorPage> {
   void initState() {
     super.initState();
     addressController.addListener(_onAddressChanged);
+    _initializeLocation();
   }
 
   @override
@@ -94,6 +95,20 @@ class _DonatorPageState extends State<DonatorPage> {
       }
     } catch (e) {
       print('Error getting location from city: $e');
+    }
+  }
+
+  Future<void> _initializeLocation() async {
+    if (widget.articleData != null && widget.articleData!['isRequest'] == true) {
+      // For active requests, use the provided location
+      if (widget.articleData!['latitude'] != null && widget.articleData!['longitude'] != null) {
+        setState(() {
+          currentLocation = LatLng(
+            widget.articleData!['latitude'],
+            widget.articleData!['longitude']
+          );
+        });
+      }
     }
   }
 
@@ -245,15 +260,17 @@ class _DonatorPageState extends State<DonatorPage> {
                       widget.articleData!['subtitle'] ?? '',
                       style: TextStyle(fontSize: 12),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Source: ${widget.articleData!['source'] ?? 'Unknown'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey.shade700,
+                    if (widget.articleData!['isRequest'] != true) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        'Source: ${widget.articleData!['source'] ?? 'Unknown'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

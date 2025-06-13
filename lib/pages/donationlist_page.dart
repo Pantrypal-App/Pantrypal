@@ -10,10 +10,10 @@ class _DonationListPageState extends State<DonationListPage> {
   TextEditingController searchController = TextEditingController();
   
   final List<Map<String, String>> donations = [
-    {"id": "06", "location": "Sto. Tomas City, Batangas"},
-    {"id": "08", "location": "Lapu-Lapu City, Cebu"},
-    {"id": "09", "location": "Tanauan City, Batangas"},
-    {"id": "07", "location": "Calamba City, Laguna"},
+    {"location": "Sto. Tomas City, Batangas"},
+    {"location": "Lapu-Lapu City, Cebu"},
+    {"location": "Tanauan City, Batangas"},
+    {"location": "Calamba City, Laguna"},
   ];
 
   List<Map<String, String>> filteredDonations = [];
@@ -74,7 +74,7 @@ class _DonationListPageState extends State<DonationListPage> {
           // List of Donations
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(top: 24, left: 16, right: 16, bottom: 16),
               itemCount: filteredDonations.length,
               itemBuilder: (context, index) {
                 return Stack(
@@ -84,7 +84,7 @@ class _DonationListPageState extends State<DonationListPage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 4,
-                      margin: const EdgeInsets.only(top: 20, bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 24),
                       child: ListTile(
                         title: Text(
                           filteredDonations[index]["location"]!,
@@ -106,18 +106,6 @@ class _DonationListPageState extends State<DonationListPage> {
                             foregroundColor: Colors.black,
                           ),
                           child: const Text("Details"),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.blue,
-                        child: Text(
-                          filteredDonations[index]["id"]!,
-                          style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

@@ -22,7 +22,7 @@ class OverviewPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.green,
         title: const Text(
-          'Donations Breakdown',
+          'Get to know us',
           style: TextStyle(fontSize: 18), // smaller title
         ),
       ),
