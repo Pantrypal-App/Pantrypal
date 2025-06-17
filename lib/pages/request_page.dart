@@ -35,6 +35,11 @@ class _RequestPageState extends State<RequestPage> {
   LatLng currentLocation = LatLng(14.1084, 121.1416); // Default location
   MapController mapController = MapController();
 
+  // Request limit variables
+  int currentWeekRequests = 0;
+  int maxRequestsPerWeek = 3;
+  bool isLoadingRequestCount = true;
+
   final Map<String, String> donationImages = {
     "MONEY": "lib/images/pig 2.png",
     "CLOTHES": "lib/images/clothe 2.png",
@@ -47,6 +52,7 @@ class _RequestPageState extends State<RequestPage> {
   void initState() {
     super.initState();
     addressController.addListener(_onAddressChanged);
+    _loadCurrentWeekRequestCount();
   }
 
   @override
@@ -89,6 +95,16 @@ class _RequestPageState extends State<RequestPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
+        // Check if user has reached the weekly request limit
+        if (!canMakeRequest()) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("You have reached your weekly request limit of $maxRequestsPerWeek requests. Please try again next week."),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ));
+          return;
+        }
+
         // Collect selected donation types
         List<String> donationTypes = selectedDonations.keys
             .where((key) => selectedDonations[key] == true)
@@ -130,7 +146,7 @@ class _RequestPageState extends State<RequestPage> {
             .doc(user.uid)
             .get();
         
-        String userName = userDoc.get('name') ?? 'Anonymous';
+        String userName = userDoc.get('username') ?? 'Anonymous';
 
         // Create the request data
         Map<String, dynamic> requestData = {
@@ -156,6 +172,9 @@ class _RequestPageState extends State<RequestPage> {
         // Save request data
         await FirebaseFirestore.instance.collection('requests').add(requestData);
 
+        // Update the user's request count using the tracking system
+        await _updateUserRequestCount();
+
         // Add notification
         await FirebaseFirestore.instance.collection('notifications').add({
           'userId': user.uid,
@@ -168,8 +187,9 @@ class _RequestPageState extends State<RequestPage> {
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Request submitted successfully!"),
+          content: Text("Request submitted successfully! You have ${getRemainingRequests()} requests remaining this week."),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ));
 
         // Clear form
@@ -226,11 +246,143 @@ class _RequestPageState extends State<RequestPage> {
     }
   }
 
+  // Get the start of the current week (Monday)
+  DateTime getStartOfWeek() {
+    DateTime now = DateTime.now();
+    int daysFromMonday = now.weekday - 1;
+    return DateTime(now.year, now.month, now.day - daysFromMonday);
+  }
+
+  // Load the current week's request count
+  Future<void> _loadCurrentWeekRequestCount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        // Get the current week's request count from user's request tracking document
+        DocumentSnapshot userRequestDoc = await FirebaseFirestore.instance
+            .collection('user_requests')
+            .doc(user.uid)
+            .get();
+
+        if (userRequestDoc.exists) {
+          Map<String, dynamic> data = userRequestDoc.data() as Map<String, dynamic>;
+          DateTime lastResetDate = (data['lastResetDate'] as Timestamp).toDate();
+          DateTime currentWeekStart = getStartOfWeek();
+          
+          // Check if we need to reset the count (new week)
+          if (lastResetDate.isBefore(currentWeekStart)) {
+            // Reset count for new week
+            await FirebaseFirestore.instance
+                .collection('user_requests')
+                .doc(user.uid)
+                .set({
+              'currentWeekRequests': 0,
+              'lastResetDate': Timestamp.fromDate(currentWeekStart),
+              'userId': user.uid,
+            });
+            
+            setState(() {
+              currentWeekRequests = 0;
+              isLoadingRequestCount = false;
+            });
+          } else {
+            // Use existing count
+            setState(() {
+              currentWeekRequests = data['currentWeekRequests'] ?? 0;
+              isLoadingRequestCount = false;
+            });
+          }
+        } else {
+          // First time user, create tracking document
+          DateTime currentWeekStart = getStartOfWeek();
+          await FirebaseFirestore.instance
+              .collection('user_requests')
+              .doc(user.uid)
+              .set({
+            'currentWeekRequests': 0,
+            'lastResetDate': Timestamp.fromDate(currentWeekStart),
+            'userId': user.uid,
+          });
+          
+          setState(() {
+            currentWeekRequests = 0;
+            isLoadingRequestCount = false;
+          });
+        }
+        
+        print('Loaded request count: $currentWeekRequests for user: ${user.uid}');
+      } catch (e) {
+        print('Error loading request count: $e');
+        setState(() {
+          isLoadingRequestCount = false;
+        });
+      }
+    } else {
+      setState(() {
+        isLoadingRequestCount = false;
+      });
+    }
+  }
+
+  // Update the user's request count
+  Future<void> _updateUserRequestCount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('user_requests')
+            .doc(user.uid)
+            .update({
+          'currentWeekRequests': FieldValue.increment(1),
+        });
+        
+        setState(() {
+          currentWeekRequests++;
+        });
+        
+        print('Updated request count to: $currentWeekRequests');
+      } catch (e) {
+        print('Error updating request count: $e');
+      }
+    }
+  }
+
+  // Check if user can make a request
+  bool canMakeRequest() {
+    return currentWeekRequests < maxRequestsPerWeek;
+  }
+
+  // Get remaining requests
+  int getRemainingRequests() {
+    return maxRequestsPerWeek - currentWeekRequests;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("PantryPal"),
+        title: Row(
+          children: [
+            Text("PantryPal"),
+            SizedBox(width: 8),
+            if (!isLoadingRequestCount)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: canMakeRequest() ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  "$currentWeekRequests/$maxRequestsPerWeek",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: canMakeRequest() ? Colors.green[800] : Colors.red[800],
+                  ),
+                ),
+              ),
+          ],
+        ),
         backgroundColor: Colors.green,
         automaticallyImplyLeading: false,
       ),
@@ -305,6 +457,8 @@ class _RequestPageState extends State<RequestPage> {
                 maxLines: 3,
                 hintText: "Please provide any additional details about your request...",
               ),
+              SizedBox(height: 16),
+              _buildRequestLimitIndicator(),
               SizedBox(height: 16),
               _buildButtons(),
             ],
@@ -405,14 +559,15 @@ class _RequestPageState extends State<RequestPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _styledButton("Cancel", Colors.grey),
-        _styledButton("Submit", const Color.fromARGB(93, 0, 255, 68)),
+        _styledButton("Submit", const Color.fromARGB(93, 0, 255, 68), 
+          enabled: canMakeRequest() && !isLoadingRequestCount),
       ],
     );
   }
 
-  Widget _styledButton(String text, Color color) {
+  Widget _styledButton(String text, Color color, {bool enabled = true}) {
     return ElevatedButton(
-      onPressed: () {
+      onPressed: enabled ? () {
         if (text == "Submit") {
           saveRequestData(); // Call saveRequestData when Submit is pressed
         } else if (text == "Cancel") {
@@ -433,14 +588,86 @@ class _RequestPageState extends State<RequestPage> {
             };
           });
         }
-      },
+      } : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
+        backgroundColor: enabled ? color : Colors.grey[400],
         padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       ),
       child: Text(
         text, // Make sure the 'text' parameter is passed correctly
-        style: TextStyle(color: Colors.black),
+        style: TextStyle(color: enabled ? Colors.black : Colors.grey[600]),
+      ),
+    );
+  }
+
+  Widget _buildRequestLimitIndicator() {
+    if (isLoadingRequestCount) {
+      return Card(
+        color: Colors.grey[100],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              CircularProgressIndicator(strokeWidth: 2),
+              SizedBox(width: 16),
+              Text("Loading request count..."),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Color indicatorColor;
+    IconData indicatorIcon;
+    String statusText;
+
+    if (currentWeekRequests >= maxRequestsPerWeek) {
+      indicatorColor = Colors.red;
+      indicatorIcon = Icons.block;
+      statusText = "Weekly limit reached";
+    } else if (currentWeekRequests >= maxRequestsPerWeek - 1) {
+      indicatorColor = Colors.orange;
+      indicatorIcon = Icons.warning;
+      statusText = "Last request remaining";
+    } else {
+      indicatorColor = Colors.green;
+      indicatorIcon = Icons.check_circle;
+      statusText = "Requests available";
+    }
+
+    return Card(
+      color: indicatorColor.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(indicatorIcon, color: indicatorColor, size: 24),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: indicatorColor,
+                    ),
+                  ),
+                  Text(
+                    "$currentWeekRequests / $maxRequestsPerWeek requests used this week",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  if (currentWeekRequests < maxRequestsPerWeek)
+                    Text(
+                      "${getRemainingRequests()} requests remaining",
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
