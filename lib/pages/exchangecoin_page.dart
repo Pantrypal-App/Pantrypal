@@ -26,7 +26,7 @@ class _DonateCoinsPageState extends State<DonateCoinsPage> {
     if (coinBalance < coins) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Not enough coins! You need $coins coins.'),
+          content: Text('Not enough coins! You need ₱$coins coins.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -77,10 +77,24 @@ class _DonateCoinsPageState extends State<DonateCoinsPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.monetization_on, color: Colors.white, size: 18),
+                    Container(
+                      padding: EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '₱',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                     SizedBox(width: 5),
                     Text(
-                      "Your Coins: $coinBalance",
+                      "Your Coins: ₱$coinBalance",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -149,7 +163,7 @@ class _DonateCoinsPageState extends State<DonateCoinsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "$coins Coins = ₱$amount.00",
+                  "₱$coins Coins = ₱$amount.00",
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 5),

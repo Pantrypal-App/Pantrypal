@@ -149,7 +149,7 @@ class _GamificationPageState extends State<GamificationPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Daily reward claimed! +$reward coins (Streak: $currentStreak days)',
+          'Daily reward claimed! +₱$reward coins (Streak: $currentStreak days)',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.green,
@@ -196,10 +196,24 @@ class _GamificationPageState extends State<GamificationPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.monetization_on, color: Colors.orange),
+                          Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '₱',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
                           SizedBox(width: 8),
                           Text(
-                            '$coinBalance coins',
+                            '₱$coinBalance coins',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -279,7 +293,7 @@ class _GamificationPageState extends State<GamificationPage> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Next reward: ${_calculateDailyReward()} coins',
+                    'Next reward: ₱${_calculateDailyReward()} coins',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   SizedBox(height: 8),
@@ -392,14 +406,24 @@ class _GamificationPageState extends State<GamificationPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(
-                      Icons.monetization_on,
-                      color: isCompleted ? Colors.grey : _getCoinColor(points),
-                      size: 16,
+                    Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isCompleted ? Colors.grey : _getCoinColor(points),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '₱',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isCompleted ? "Completed" : "Earn $points coins!",
+                      isCompleted ? "Completed" : "Earn ₱$points coins!",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,

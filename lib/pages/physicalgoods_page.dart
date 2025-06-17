@@ -20,7 +20,9 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   List<Map<String, dynamic>> filteredRequests = [];
   bool isLoading = true;
   bool hasError = false;
+  bool isSearching = false;
   StreamSubscription? _requestsSubscription;
+  Timer? _searchDebounce;
 
   final String apiKey = '40d90771b221f00df174794556caf8e5';
 
@@ -40,6 +42,8 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   @override
   void dispose() {
     _requestsSubscription?.cancel();
+    _searchDebounce?.cancel();
+    searchController.dispose();
     super.dispose();
   }
 
@@ -94,7 +98,94 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
   }
 
   void filterDonations(String query) {
-    _updateFilteredContent(query);
+    // Cancel previous debounce timer
+    _searchDebounce?.cancel();
+    
+    // Update requests filtering - search in both title and description
+    final lowerQuery = query.toLowerCase();
+    setState(() {
+      filteredRequests = requests.where((request) {
+        final title = request['title']?.toString().toLowerCase() ?? '';
+        final subtitle = request['subtitle']?.toString().toLowerCase() ?? '';
+        return title.contains(lowerQuery) || subtitle.contains(lowerQuery);
+      }).toList();
+    });
+    
+    // Debounce the API search to avoid too many requests
+    _searchDebounce = Timer(Duration(milliseconds: 500), () {
+      searchNews(query);
+    });
+  }
+
+  Future<void> searchNews(String query) async {
+    print("Searching for: '$query'"); // Debug print
+    
+    if (query.trim().isEmpty) {
+      // If search is empty, show all original news
+      setState(() {
+        filteredDonations = donations;
+        isSearching = false;
+        isLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isSearching = true;
+      isLoading = true;
+    });
+
+    try {
+      // Search in both title and description by using a broader search query
+      final searchUrl = Uri.parse(
+          'https://gnews.io/api/v4/search?q=$query&country=ph&lang=en&max=20&token=$apiKey');
+
+      print("Making API call to: $searchUrl"); // Debug print
+
+      final response = await http.get(searchUrl);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> articles = data['articles'] ?? [];
+        
+        print("Found ${articles.length} articles"); // Debug print
+
+        final filteredArticles = articles.where((article) {
+          final dateStr = article['publishedAt'] ?? '';
+          if (dateStr.isEmpty) return false;
+          final pubDate = DateTime.tryParse(dateStr);
+          if (pubDate == null) return false;
+          return pubDate.year >= 2024 && pubDate.year <= 2025;
+        }).toList();
+
+        final List<Map<String, String>> searchResults = filteredArticles.map<Map<String, String>>((article) {
+          return {
+            'title': article['title']?.toString() ?? 'No Title',
+            'subtitle': article['description']?.toString() ?? 'No Description',
+            'count': '${(1000 + article['title'].hashCode % 3000)} donations',
+            'source': article['source']?['name']?.toString() ?? 'Unknown Source',
+          };
+        }).toList();
+
+        print("Filtered to ${searchResults.length} results"); // Debug print
+
+        setState(() {
+          filteredDonations = searchResults;
+          isSearching = false;
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to search news: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Search error: $e");
+      setState(() {
+        isSearching = false;
+        isLoading = false;
+        // On error, show original news
+        filteredDonations = donations;
+      });
+    }
   }
 
   Future<void> fetchNews() async {
@@ -228,23 +319,46 @@ class _PhysicalGoodsDonationPageState extends State<PhysicalGoodsDonationPage> {
               ),
             ),
             SizedBox(height: 20),
-            TextField(
-              controller: searchController,
-              onChanged: filterDonations,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                hintText: 'Search donations and requests...',
-                hintStyle: TextStyle(color: Colors.grey),
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: filterDonations,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'Search donations and requests...',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear, color: Colors.grey),
+                              onPressed: () {
+                                searchController.clear();
+                                filterDonations('');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                if (isSearching) ...[
+                  SizedBox(width: 10),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
+              ],
             ),
             SizedBox(height: 20),
-            if (isLoading)
+            if (isLoading && !isSearching)
               Center(child: CircularProgressIndicator())
             else if (hasError)
               Center(

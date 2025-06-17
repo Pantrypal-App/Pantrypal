@@ -196,7 +196,7 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                       child: Image.asset(
-                        'lib/images/coin.png', // Ensure the asset is added correctly
+                        'lib/images/peso.png', // Ensure the asset is added correctly
                         width: 80, // Adjust size as needed
                         height: 80,
                       ),
